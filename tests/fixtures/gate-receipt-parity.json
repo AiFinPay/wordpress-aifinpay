@@ -1,0 +1,313 @@
+{
+ "source": "@aifinpay/gate src/challenge.ts buildChallenge and src/scope.ts scopeCovers (sdk d8725f4, the section page row from gate 0.9.1, the how_to_pay line from gate 0.10.0) with MIN_BATCH_UNITS 20_000",
+ "challenges": [
+  {
+   "args": {
+    "merchantId": "mrch_45b1fb9572bdf4f3",
+    "resource": "/resources/*",
+    "tier": "standard",
+    "weight": 1,
+    "detail": ""
+   },
+   "body": {
+    "error": "AIFP-402",
+    "detail": "Payment Required — prepay a batch of requests and retry with the AIFP-Receipt header",
+    "protocol": "AIFP-1",
+    "documentation_url": "https://github.com/AiFinPay/sdk/blob/main/AGENT-FLOW.md",
+    "instructions_url": "https://raw.githubusercontent.com/AiFinPay/skill/main/agent/skills/aifinpay/SKILL.md",
+    "merchant_instructions_url": "https://raw.githubusercontent.com/AiFinPay/skill/main/agent/skills/aifinpay-merchant/SKILL.md",
+    "merchant_id": "mrch_45b1fb9572bdf4f3",
+    "resource": "/resources/*",
+    "tier": "standard",
+    "unit_weight": 1,
+    "unit_price_usd": "0.0005",
+    "min_requests": 40,
+    "scope": "exact",
+    "protocol_fee_bps": 100,
+    "no_minimum_fee": true,
+    "settlement_terms_from": "POST https://api.aifinpay.io/v1/quote — returns accepted_chains, accepted_assets, amount, order_id and expiry",
+    "how_to_pay": [
+     "POST https://api.aifinpay.io/v1/quote {\"merchant_id\":\"mrch_45b1fb9572bdf4f3\",\"resource\":\"/resources/*\",\"tier\":\"standard\",\"scope\":\"exact\",\"requests\":40,\"payer\":\"<your wallet address>\"} — payer is required; raise requests to buy more than the minimum batch; check amount, scope, expiry and payer before paying",
+     "settle the quoted batch on-chain from your own wallet (order_id = quote_id)",
+     "POST https://api.aifinpay.io/v1/pay {quote_id, chain, asset, tx_ref, payment_authorization} + Idempotency-Key header -> quota receipt (wallet-signature-v1). Keep the quote until you hold the receipt; on a timeout retry with the same key and tx_ref — never pay again",
+     "retry this request with headers: AIFP-Receipt: <receipt JWT> and AIFP-Agent-Id: <the address that paid>"
+    ],
+    "no_wallet": "npx @aifinpay/mcp init — creates or selects a local wallet; read instructions_url for supported clients and payment availability. Wallet setup alone does not enable settlement."
+   }
+  },
+  {
+   "args": {
+    "merchantId": "mrch_45b1fb9572bdf4f3",
+    "resource": "/resources/*",
+    "tier": "standard",
+    "weight": 1,
+    "detail": "quota exhausted — prepay the next batch"
+   },
+   "body": {
+    "error": "AIFP-402",
+    "detail": "quota exhausted — prepay the next batch",
+    "protocol": "AIFP-1",
+    "documentation_url": "https://github.com/AiFinPay/sdk/blob/main/AGENT-FLOW.md",
+    "instructions_url": "https://raw.githubusercontent.com/AiFinPay/skill/main/agent/skills/aifinpay/SKILL.md",
+    "merchant_instructions_url": "https://raw.githubusercontent.com/AiFinPay/skill/main/agent/skills/aifinpay-merchant/SKILL.md",
+    "merchant_id": "mrch_45b1fb9572bdf4f3",
+    "resource": "/resources/*",
+    "tier": "standard",
+    "unit_weight": 1,
+    "unit_price_usd": "0.0005",
+    "min_requests": 40,
+    "scope": "exact",
+    "protocol_fee_bps": 100,
+    "no_minimum_fee": true,
+    "settlement_terms_from": "POST https://api.aifinpay.io/v1/quote — returns accepted_chains, accepted_assets, amount, order_id and expiry",
+    "how_to_pay": [
+     "POST https://api.aifinpay.io/v1/quote {\"merchant_id\":\"mrch_45b1fb9572bdf4f3\",\"resource\":\"/resources/*\",\"tier\":\"standard\",\"scope\":\"exact\",\"requests\":40,\"payer\":\"<your wallet address>\"} — payer is required; raise requests to buy more than the minimum batch; check amount, scope, expiry and payer before paying",
+     "settle the quoted batch on-chain from your own wallet (order_id = quote_id)",
+     "POST https://api.aifinpay.io/v1/pay {quote_id, chain, asset, tx_ref, payment_authorization} + Idempotency-Key header -> quota receipt (wallet-signature-v1). Keep the quote until you hold the receipt; on a timeout retry with the same key and tx_ref — never pay again",
+     "retry this request with headers: AIFP-Receipt: <receipt JWT> and AIFP-Agent-Id: <the address that paid>"
+    ],
+    "no_wallet": "npx @aifinpay/mcp init — creates or selects a local wallet; read instructions_url for supported clients and payment availability. Wallet setup alone does not enable settlement."
+   }
+  },
+  {
+   "args": {
+    "merchantId": "mrch_45b1fb9572bdf4f3",
+    "resource": "/resources/*",
+    "tier": "complex",
+    "weight": 4,
+    "detail": ""
+   },
+   "body": {
+    "error": "AIFP-402",
+    "detail": "Payment Required — prepay a batch of requests and retry with the AIFP-Receipt header",
+    "protocol": "AIFP-1",
+    "documentation_url": "https://github.com/AiFinPay/sdk/blob/main/AGENT-FLOW.md",
+    "instructions_url": "https://raw.githubusercontent.com/AiFinPay/skill/main/agent/skills/aifinpay/SKILL.md",
+    "merchant_instructions_url": "https://raw.githubusercontent.com/AiFinPay/skill/main/agent/skills/aifinpay-merchant/SKILL.md",
+    "merchant_id": "mrch_45b1fb9572bdf4f3",
+    "resource": "/resources/*",
+    "tier": "complex",
+    "unit_weight": 4,
+    "unit_price_usd": "0.002",
+    "min_requests": 10,
+    "scope": "exact",
+    "protocol_fee_bps": 100,
+    "no_minimum_fee": true,
+    "settlement_terms_from": "POST https://api.aifinpay.io/v1/quote — returns accepted_chains, accepted_assets, amount, order_id and expiry",
+    "how_to_pay": [
+     "POST https://api.aifinpay.io/v1/quote {\"merchant_id\":\"mrch_45b1fb9572bdf4f3\",\"resource\":\"/resources/*\",\"tier\":\"complex\",\"scope\":\"exact\",\"requests\":10,\"payer\":\"<your wallet address>\"} — payer is required; raise requests to buy more than the minimum batch; check amount, scope, expiry and payer before paying",
+     "settle the quoted batch on-chain from your own wallet (order_id = quote_id)",
+     "POST https://api.aifinpay.io/v1/pay {quote_id, chain, asset, tx_ref, payment_authorization} + Idempotency-Key header -> quota receipt (wallet-signature-v1). Keep the quote until you hold the receipt; on a timeout retry with the same key and tx_ref — never pay again",
+     "retry this request with headers: AIFP-Receipt: <receipt JWT> and AIFP-Agent-Id: <the address that paid>"
+    ],
+    "no_wallet": "npx @aifinpay/mcp init — creates or selects a local wallet; read instructions_url for supported clients and payment availability. Wallet setup alone does not enable settlement."
+   }
+  },
+  {
+   "args": {
+    "merchantId": "mrch_45b1fb9572bdf4f3",
+    "resource": "/resources/*",
+    "tier": "complex",
+    "weight": 4,
+    "detail": "quota exhausted — prepay the next batch"
+   },
+   "body": {
+    "error": "AIFP-402",
+    "detail": "quota exhausted — prepay the next batch",
+    "protocol": "AIFP-1",
+    "documentation_url": "https://github.com/AiFinPay/sdk/blob/main/AGENT-FLOW.md",
+    "instructions_url": "https://raw.githubusercontent.com/AiFinPay/skill/main/agent/skills/aifinpay/SKILL.md",
+    "merchant_instructions_url": "https://raw.githubusercontent.com/AiFinPay/skill/main/agent/skills/aifinpay-merchant/SKILL.md",
+    "merchant_id": "mrch_45b1fb9572bdf4f3",
+    "resource": "/resources/*",
+    "tier": "complex",
+    "unit_weight": 4,
+    "unit_price_usd": "0.002",
+    "min_requests": 10,
+    "scope": "exact",
+    "protocol_fee_bps": 100,
+    "no_minimum_fee": true,
+    "settlement_terms_from": "POST https://api.aifinpay.io/v1/quote — returns accepted_chains, accepted_assets, amount, order_id and expiry",
+    "how_to_pay": [
+     "POST https://api.aifinpay.io/v1/quote {\"merchant_id\":\"mrch_45b1fb9572bdf4f3\",\"resource\":\"/resources/*\",\"tier\":\"complex\",\"scope\":\"exact\",\"requests\":10,\"payer\":\"<your wallet address>\"} — payer is required; raise requests to buy more than the minimum batch; check amount, scope, expiry and payer before paying",
+     "settle the quoted batch on-chain from your own wallet (order_id = quote_id)",
+     "POST https://api.aifinpay.io/v1/pay {quote_id, chain, asset, tx_ref, payment_authorization} + Idempotency-Key header -> quota receipt (wallet-signature-v1). Keep the quote until you hold the receipt; on a timeout retry with the same key and tx_ref — never pay again",
+     "retry this request with headers: AIFP-Receipt: <receipt JWT> and AIFP-Agent-Id: <the address that paid>"
+    ],
+    "no_wallet": "npx @aifinpay/mcp init — creates or selects a local wallet; read instructions_url for supported clients and payment availability. Wallet setup alone does not enable settlement."
+   }
+  },
+  {
+   "args": {
+    "merchantId": "mrch_45b1fb9572bdf4f3",
+    "resource": "/resources/*",
+    "tier": "premium",
+    "weight": 10,
+    "detail": ""
+   },
+   "body": {
+    "error": "AIFP-402",
+    "detail": "Payment Required — prepay a batch of requests and retry with the AIFP-Receipt header",
+    "protocol": "AIFP-1",
+    "documentation_url": "https://github.com/AiFinPay/sdk/blob/main/AGENT-FLOW.md",
+    "instructions_url": "https://raw.githubusercontent.com/AiFinPay/skill/main/agent/skills/aifinpay/SKILL.md",
+    "merchant_instructions_url": "https://raw.githubusercontent.com/AiFinPay/skill/main/agent/skills/aifinpay-merchant/SKILL.md",
+    "merchant_id": "mrch_45b1fb9572bdf4f3",
+    "resource": "/resources/*",
+    "tier": "premium",
+    "unit_weight": 10,
+    "unit_price_usd": "0.005",
+    "min_requests": 4,
+    "scope": "exact",
+    "protocol_fee_bps": 100,
+    "no_minimum_fee": true,
+    "settlement_terms_from": "POST https://api.aifinpay.io/v1/quote — returns accepted_chains, accepted_assets, amount, order_id and expiry",
+    "how_to_pay": [
+     "POST https://api.aifinpay.io/v1/quote {\"merchant_id\":\"mrch_45b1fb9572bdf4f3\",\"resource\":\"/resources/*\",\"tier\":\"premium\",\"scope\":\"exact\",\"requests\":4,\"payer\":\"<your wallet address>\"} — payer is required; raise requests to buy more than the minimum batch; check amount, scope, expiry and payer before paying",
+     "settle the quoted batch on-chain from your own wallet (order_id = quote_id)",
+     "POST https://api.aifinpay.io/v1/pay {quote_id, chain, asset, tx_ref, payment_authorization} + Idempotency-Key header -> quota receipt (wallet-signature-v1). Keep the quote until you hold the receipt; on a timeout retry with the same key and tx_ref — never pay again",
+     "retry this request with headers: AIFP-Receipt: <receipt JWT> and AIFP-Agent-Id: <the address that paid>"
+    ],
+    "no_wallet": "npx @aifinpay/mcp init — creates or selects a local wallet; read instructions_url for supported clients and payment availability. Wallet setup alone does not enable settlement."
+   }
+  },
+  {
+   "args": {
+    "merchantId": "mrch_45b1fb9572bdf4f3",
+    "resource": "/resources/*",
+    "tier": "premium",
+    "weight": 10,
+    "detail": "quota exhausted — prepay the next batch"
+   },
+   "body": {
+    "error": "AIFP-402",
+    "detail": "quota exhausted — prepay the next batch",
+    "protocol": "AIFP-1",
+    "documentation_url": "https://github.com/AiFinPay/sdk/blob/main/AGENT-FLOW.md",
+    "instructions_url": "https://raw.githubusercontent.com/AiFinPay/skill/main/agent/skills/aifinpay/SKILL.md",
+    "merchant_instructions_url": "https://raw.githubusercontent.com/AiFinPay/skill/main/agent/skills/aifinpay-merchant/SKILL.md",
+    "merchant_id": "mrch_45b1fb9572bdf4f3",
+    "resource": "/resources/*",
+    "tier": "premium",
+    "unit_weight": 10,
+    "unit_price_usd": "0.005",
+    "min_requests": 4,
+    "scope": "exact",
+    "protocol_fee_bps": 100,
+    "no_minimum_fee": true,
+    "settlement_terms_from": "POST https://api.aifinpay.io/v1/quote — returns accepted_chains, accepted_assets, amount, order_id and expiry",
+    "how_to_pay": [
+     "POST https://api.aifinpay.io/v1/quote {\"merchant_id\":\"mrch_45b1fb9572bdf4f3\",\"resource\":\"/resources/*\",\"tier\":\"premium\",\"scope\":\"exact\",\"requests\":4,\"payer\":\"<your wallet address>\"} — payer is required; raise requests to buy more than the minimum batch; check amount, scope, expiry and payer before paying",
+     "settle the quoted batch on-chain from your own wallet (order_id = quote_id)",
+     "POST https://api.aifinpay.io/v1/pay {quote_id, chain, asset, tx_ref, payment_authorization} + Idempotency-Key header -> quota receipt (wallet-signature-v1). Keep the quote until you hold the receipt; on a timeout retry with the same key and tx_ref — never pay again",
+     "retry this request with headers: AIFP-Receipt: <receipt JWT> and AIFP-Agent-Id: <the address that paid>"
+    ],
+    "no_wallet": "npx @aifinpay/mcp init — creates or selects a local wallet; read instructions_url for supported clients and payment availability. Wallet setup alone does not enable settlement."
+   }
+  }
+ ],
+ "scopes": [
+  {
+   "scope": "merchant",
+   "resource": "/x",
+   "path": "/anything",
+   "covers": true
+  },
+  {
+   "scope": "prefix",
+   "resource": "/",
+   "path": "/a/b",
+   "covers": true
+  },
+  {
+   "scope": "prefix",
+   "resource": "/articles",
+   "path": "/articles",
+   "covers": true
+  },
+  {
+   "scope": "prefix",
+   "resource": "/articles",
+   "path": "/articles/1",
+   "covers": true
+  },
+  {
+   "scope": "prefix",
+   "resource": "/articles",
+   "path": "/articles-internal",
+   "covers": false
+  },
+  {
+   "scope": "prefix",
+   "resource": "/articles/",
+   "path": "/articles/1",
+   "covers": true
+  },
+  {
+   "scope": "prefix",
+   "resource": "/articles/",
+   "path": "/articles",
+   "covers": true
+  },
+  {
+   "scope": "exact",
+   "resource": "/pricing",
+   "path": "/pricing",
+   "covers": true
+  },
+  {
+   "scope": "exact",
+   "resource": "/pricing",
+   "path": "/pricing/x",
+   "covers": false
+  },
+  {
+   "scope": "exact",
+   "resource": "/movies/*",
+   "path": "/movies",
+   "covers": true
+  },
+  {
+   "scope": "exact",
+   "resource": "/movies/*",
+   "path": "/movies/inception",
+   "covers": true
+  },
+  {
+   "scope": "exact",
+   "resource": "/movies/*",
+   "path": "/moviesx",
+   "covers": false
+  },
+  {
+   "scope": null,
+   "resource": "/movies/*",
+   "path": "/movies/a",
+   "covers": true
+  },
+  {
+   "scope": "bogus",
+   "resource": "/a",
+   "path": "/a",
+   "covers": true
+  },
+  {
+   "scope": "bogus",
+   "resource": "/a",
+   "path": "/b",
+   "covers": false
+  },
+  {
+   "scope": "exact",
+   "resource": null,
+   "path": "/a",
+   "covers": false
+  },
+  {
+   "scope": "",
+   "resource": "/resources/*",
+   "path": "/resources/demo-report",
+   "covers": true
+  }
+ ]
+}

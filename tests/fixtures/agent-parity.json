@@ -1,0 +1,1390 @@
+{
+ "generated_from": "@aifinpay/gate 0.8.0 (AiFinPay/sdk main c2a4130)",
+ "operators": [
+  "openai",
+  "anthropic",
+  "perplexity",
+  "google",
+  "microsoft",
+  "meta",
+  "bytedance",
+  "apple",
+  "amazon",
+  "commoncrawl",
+  "aifinpay",
+  "unknown"
+ ],
+ "ua_classes": [
+  "ai_crawler",
+  "ai_agent_browser",
+  "aifp_agent",
+  "human",
+  "unknown"
+ ],
+ "table": [
+  [
+   "gptbot",
+   "openai",
+   "ai_crawler"
+  ],
+  [
+   "oai-searchbot",
+   "openai",
+   "ai_crawler"
+  ],
+  [
+   "chatgpt-user",
+   "openai",
+   "ai_agent_browser"
+  ],
+  [
+   "claudebot",
+   "anthropic",
+   "ai_crawler"
+  ],
+  [
+   "claude-searchbot",
+   "anthropic",
+   "ai_crawler"
+  ],
+  [
+   "claude-user",
+   "anthropic",
+   "ai_agent_browser"
+  ],
+  [
+   "claude-web",
+   "anthropic",
+   "ai_agent_browser"
+  ],
+  [
+   "anthropic-ai",
+   "anthropic",
+   "ai_crawler"
+  ],
+  [
+   "perplexitybot",
+   "perplexity",
+   "ai_crawler"
+  ],
+  [
+   "perplexity-user",
+   "perplexity",
+   "ai_agent_browser"
+  ],
+  [
+   "ccbot",
+   "commoncrawl",
+   "ai_crawler"
+  ],
+  [
+   "bytespider",
+   "bytedance",
+   "ai_crawler"
+  ],
+  [
+   "google-extended",
+   "google",
+   "ai_crawler"
+  ],
+  [
+   "applebot-extended",
+   "apple",
+   "ai_crawler"
+  ],
+  [
+   "meta-externalagent",
+   "meta",
+   "ai_crawler"
+  ],
+  [
+   "facebookbot",
+   "meta",
+   "ai_crawler"
+  ],
+  [
+   "amazonbot",
+   "amazon",
+   "ai_crawler"
+  ],
+  [
+   "youbot",
+   "unknown",
+   "ai_crawler"
+  ],
+  [
+   "diffbot",
+   "unknown",
+   "ai_crawler"
+  ],
+  [
+   "timpibot",
+   "unknown",
+   "ai_crawler"
+  ],
+  [
+   "omgilibot",
+   "unknown",
+   "ai_crawler"
+  ],
+  [
+   "cohere-ai",
+   "unknown",
+   "ai_agent_browser"
+  ],
+  [
+   "ai2bot",
+   "unknown",
+   "ai_crawler"
+  ],
+  [
+   "mistralai",
+   "unknown",
+   "ai_agent_browser"
+  ],
+  [
+   "aifinpay-agent",
+   "aifinpay",
+   "aifp_agent"
+  ],
+  [
+   "headlesschrome",
+   "unknown",
+   "unknown"
+  ],
+  [
+   "phantomjs",
+   "unknown",
+   "unknown"
+  ]
+ ],
+ "classify": [
+  {
+   "headers": {
+    "User-Agent": "gptbot"
+   },
+   "result": {
+    "operator": "openai",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Gptbot/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "openai",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "GPTBOT/2.1"
+   },
+   "result": {
+    "operator": "openai",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "oai-searchbot"
+   },
+   "result": {
+    "operator": "openai",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Oai-Searchbot/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "openai",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "OAI-SEARCHBOT/2.1"
+   },
+   "result": {
+    "operator": "openai",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "chatgpt-user"
+   },
+   "result": {
+    "operator": "openai",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Chatgpt-User/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "openai",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "CHATGPT-USER/2.1"
+   },
+   "result": {
+    "operator": "openai",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "claudebot"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claudebot/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "CLAUDEBOT/2.1"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "claude-searchbot"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-Searchbot/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "CLAUDE-SEARCHBOT/2.1"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "claude-user"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-User/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "CLAUDE-USER/2.1"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "claude-web"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-Web/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "CLAUDE-WEB/2.1"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "anthropic-ai"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Anthropic-Ai/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "ANTHROPIC-AI/2.1"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "perplexitybot"
+   },
+   "result": {
+    "operator": "perplexity",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Perplexitybot/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "perplexity",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "PERPLEXITYBOT/2.1"
+   },
+   "result": {
+    "operator": "perplexity",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "perplexity-user"
+   },
+   "result": {
+    "operator": "perplexity",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Perplexity-User/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "perplexity",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "PERPLEXITY-USER/2.1"
+   },
+   "result": {
+    "operator": "perplexity",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "ccbot"
+   },
+   "result": {
+    "operator": "commoncrawl",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Ccbot/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "commoncrawl",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "CCBOT/2.1"
+   },
+   "result": {
+    "operator": "commoncrawl",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "bytespider"
+   },
+   "result": {
+    "operator": "bytedance",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Bytespider/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "bytedance",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "BYTESPIDER/2.1"
+   },
+   "result": {
+    "operator": "bytedance",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "google-extended"
+   },
+   "result": {
+    "operator": "google",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Google-Extended/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "google",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "GOOGLE-EXTENDED/2.1"
+   },
+   "result": {
+    "operator": "google",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "applebot-extended"
+   },
+   "result": {
+    "operator": "apple",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Applebot-Extended/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "apple",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "APPLEBOT-EXTENDED/2.1"
+   },
+   "result": {
+    "operator": "apple",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "meta-externalagent"
+   },
+   "result": {
+    "operator": "meta",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Meta-Externalagent/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "meta",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "META-EXTERNALAGENT/2.1"
+   },
+   "result": {
+    "operator": "meta",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "facebookbot"
+   },
+   "result": {
+    "operator": "meta",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Facebookbot/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "meta",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "FACEBOOKBOT/2.1"
+   },
+   "result": {
+    "operator": "meta",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "amazonbot"
+   },
+   "result": {
+    "operator": "amazon",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Amazonbot/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "amazon",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "AMAZONBOT/2.1"
+   },
+   "result": {
+    "operator": "amazon",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "youbot"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Youbot/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "YOUBOT/2.1"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "diffbot"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Diffbot/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "DIFFBOT/2.1"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "timpibot"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Timpibot/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "TIMPIBOT/2.1"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "omgilibot"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Omgilibot/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "OMGILIBOT/2.1"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "cohere-ai"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Cohere-Ai/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "COHERE-AI/2.1"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "ai2bot"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Ai2bot/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "AI2BOT/2.1"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "mistralai"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Mistralai/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "MISTRALAI/2.1"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "aifinpay-agent"
+   },
+   "result": {
+    "operator": "aifinpay",
+    "ua_class": "aifp_agent",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Aifinpay-Agent/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "aifinpay",
+    "ua_class": "aifp_agent",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "AIFINPAY-AGENT/2.1"
+   },
+   "result": {
+    "operator": "aifinpay",
+    "ua_class": "aifp_agent",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "headlesschrome"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "unknown",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Headlesschrome/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "unknown",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "HEADLESSCHROME/2.1"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "unknown",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "phantomjs"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "unknown",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Phantomjs/1.0; +https://example.com/bot)"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "unknown",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "PHANTOMJS/2.1"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "unknown",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; GPTBot/1.2; +https://openai.com/gptbot"
+   },
+   "result": {
+    "operator": "openai",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; ChatGPT-User/1.0; +https://openai.com/bot"
+   },
+   "result": {
+    "operator": "openai",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 (compatible; OAI-SearchBot/1.0; +https://openai.com/searchbot)"
+   },
+   "result": {
+    "operator": "openai",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com)"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-User/1.0; +Claude-User@anthropic.com)"
+   },
+   "result": {
+    "operator": "anthropic",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)"
+   },
+   "result": {
+    "operator": "perplexity",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Perplexity-User/1.0; +https://perplexity.ai/perplexity-user)"
+   },
+   "result": {
+    "operator": "perplexity",
+    "ua_class": "ai_agent_browser",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "CCBot/2.0 (https://commoncrawl.org/faq/)"
+   },
+   "result": {
+    "operator": "commoncrawl",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (KHTML, like Gecko) Mobile Safari/537.36 (compatible; Bytespider; spider-feedback@bytedance.com)"
+   },
+   "result": {
+    "operator": "bytedance",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 (compatible; Google-Extended)"
+   },
+   "result": {
+    "operator": "google",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Safari/605.1.15 (Applebot-Extended/0.1)"
+   },
+   "result": {
+    "operator": "apple",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "meta-externalagent/1.1 (+https://developers.facebook.com/docs/sharing/webmasters/crawler)"
+   },
+   "result": {
+    "operator": "meta",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 (compatible; Amazonbot/0.1; +https://developer.amazon.com/support/amazonbot)"
+   },
+   "result": {
+    "operator": "amazon",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "aifinpay-agent-node/2.9.0"
+   },
+   "result": {
+    "operator": "aifinpay",
+    "ua_class": "aifp_agent",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "aifinpay-agent-py/1.0.0"
+   },
+   "result": {
+    "operator": "aifinpay",
+    "ua_class": "aifp_agent",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "AiFinPay-SiteCheck/1.0 (+https://aifinpay.io/llms.txt; aifinpay-agent)"
+   },
+   "result": {
+    "operator": "aifinpay",
+    "ua_class": "aifp_agent",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "AiFinPay-SiteCheck/1.0 (+https://aifinpay.io/llms.txt)"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "human",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/126.0.0.0 Safari/537.36"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "unknown",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "human",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "human",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Slack/4.41.0 Chrome/130.0 Electron/33.0 Safari/537.36"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "human",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "human",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "human",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "curl/8.7.1"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "human",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "python-requests/2.32.3"
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "human",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 ClaudeBot GPTBot"
+   },
+   "result": {
+    "operator": "openai",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 gptbot-like-crawler"
+   },
+   "result": {
+    "operator": "openai",
+    "ua_class": "ai_crawler",
+    "verified": false
+   }
+  },
+  {
+   "headers": {},
+   "result": {
+    "operator": "unknown",
+    "ua_class": "unknown",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": ""
+   },
+   "result": {
+    "operator": "unknown",
+    "ua_class": "unknown",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "Mozilla/5.0 (Macintosh) Safari/605",
+    "AIFP-Agent-Id": "0xabc"
+   },
+   "result": {
+    "operator": "aifinpay",
+    "ua_class": "aifp_agent",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "GPTBot/1.2",
+    "AIFP-Receipt": "jwt"
+   },
+   "result": {
+    "operator": "aifinpay",
+    "ua_class": "aifp_agent",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "AIFP-Receipt": "jwt"
+   },
+   "result": {
+    "operator": "aifinpay",
+    "ua_class": "aifp_agent",
+    "verified": false
+   }
+  },
+  {
+   "headers": {
+    "User-Agent": "curl/8.7.1",
+    "AIFP-Agent-Id": "agent-1"
+   },
+   "result": {
+    "operator": "aifinpay",
+    "ua_class": "aifp_agent",
+    "verified": false
+   }
+  }
+ ],
+ "discovery_link": {
+  "default": "</llms.txt>; rel=\"alternate\"; type=\"text/markdown\"; title=\"AI agents: access and payment\", </.well-known/x402.json>; rel=\"describedby\"; type=\"application/json\"",
+  "without_x402": "</llms.txt>; rel=\"alternate\"; type=\"text/markdown\"; title=\"AI agents: access and payment\"",
+  "html": [
+   [
+    "text/html",
+    true
+   ],
+   [
+    "text/html; charset=utf-8",
+    true
+   ],
+   [
+    "TEXT/HTML",
+    true
+   ],
+   [
+    " text/html ;q=1",
+    true
+   ],
+   [
+    "application/xhtml+xml",
+    true
+   ],
+   [
+    "application/json",
+    false
+   ],
+   [
+    "text/plain",
+    false
+   ],
+   [
+    "text/htmlx",
+    false
+   ],
+   [
+    "",
+    false
+   ]
+  ]
+ },
+ "discovery": {
+  "args": {
+   "merchant_id": "mrch_parity",
+   "resources": [
+    {
+     "resource": "/api/a"
+    },
+    {
+     "resource": "/api/*",
+     "tier": "premium",
+     "scope": "prefix",
+     "name": "All"
+    }
+   ],
+   "api_base": "https://api.aifinpay.io/"
+  },
+  "body": {
+   "x402_version": 1,
+   "protocol": "AIFP-1",
+   "merchant_id": "mrch_parity",
+   "quote_endpoint": "https://api.aifinpay.io/v1/quote",
+   "pay_endpoint": "https://api.aifinpay.io/v1/pay",
+   "onboarding": "npx @aifinpay/mcp init",
+   "documentation_url": "https://github.com/AiFinPay/sdk/blob/main/AGENT-FLOW.md",
+   "instructions_url": "https://raw.githubusercontent.com/AiFinPay/skill/main/agent/skills/aifinpay/SKILL.md",
+   "merchant_instructions_url": "https://raw.githubusercontent.com/AiFinPay/skill/main/agent/skills/aifinpay-merchant/SKILL.md",
+   "resources": [
+    {
+     "resource": "/api/a",
+     "tier": "standard",
+     "scope": "exact",
+     "unit_price_usd": "0.0005"
+    },
+    {
+     "resource": "/api/*",
+     "name": "All",
+     "tier": "premium",
+     "scope": "prefix",
+     "unit_price_usd": "0.005"
+    }
+   ],
+   "settlement_terms_from": "https://api.aifinpay.io/v1/quote"
+  }
+ }
+}
