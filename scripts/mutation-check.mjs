@@ -66,7 +66,7 @@ const unit = [
   ['paths', 'non-ASCII stays raw', 'src/Core/Paths.php', "$canonical = preg_replace_callback( '/[\\x80-\\xff]/', static fn ( array $m ): string => sprintf( '%%%02x', ord( $m[0] ) ), '/' . implode( '/', $out ) );", "$canonical = '/' . implode( '/', $out );"],
   ['paths', 'the longest pattern wins over an exact one', 'src/Core/Paths.php', ": PHP_INT_MAX;", ": strlen( $pattern );"],
   ['paths', 'the receipt resource is compared as written', 'src/Core/ReceiptGate.php', "is_string( $bought ) ? Paths::spelled( $bought ) : $bought", "$bought"],
-  ['parity', 'the 402 body drifts', 'src/Core/ReceiptGate.php', "'protocol_fee_bps'          => 100,", "'protocol_fee_bps'          => 200,"],
+  ['parity', 'the 402 body drifts', 'src/Core/ReceiptGate.php', "'no_minimum_fee'            => true,", "'no_minimum_fee'            => false,"],
   ['parity', 'the minimum batch drifts', 'src/Core/Pricing.php', "'standard' => 40,", "'standard' => 200,"],
   ['parity', 'a classifier marker goes missing', 'src/Core/AgentIdentity.php', "\t\t'claudebot'          => [ 'anthropic', 'ai_crawler' ],\n", ""],
   ['events', 'a rejected credential drops the events', 'src/WordPress/EventDelivery.php', " || 401 === $status || 403 === $status;", ";"],
