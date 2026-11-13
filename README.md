@@ -28,7 +28,7 @@ AIFINPAY_WP_ROOT=.local/test/web php vendor/bin/phpunit --testsuite wordpress
 node scripts/check-gate-parity.mjs
 ```
 
-Both check `@aifinpay/gate` 0.10.1 from npm; for an unpublished build set `GATE_DIST=<sdk>/gate/dist`.
+Both check `@aifinpay/gate` 0.11.0 from npm; for an unpublished build set `GATE_DIST=<sdk>/gate/dist`.
 
 ```bash
 node tests/e2e/run.mjs sqlite

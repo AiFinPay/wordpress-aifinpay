@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const version = process.env.GATE_VERSION ?? '0.10.1';
+const version = process.env.GATE_VERSION ?? '0.11.0';
 const dir = join(root, '.local', `gate-${version}`);
 const built = process.env.GATE_DIST;
 if (!built && !existsSync(join(dir, 'node_modules/@aifinpay/gate'))) {
