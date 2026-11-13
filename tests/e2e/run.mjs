@@ -181,7 +181,7 @@ const startServer = async () => {
 const flushRecord = () => wp('transient', 'delete', 'aifinpay_record');
 
 // ── Run ────────────────────────────────────────────────────────────────────
-const gatePkg = join(process.env.GATE_DIST ?? join(root, '.local/gate-0.10.1/node_modules/@aifinpay/gate/dist'), 'index.js');
+const gatePkg = join(process.env.GATE_DIST ?? join(root, '.local/gate-0.11.0/node_modules/@aifinpay/gate/dist'), 'index.js');
 assert.ok(existsSync(gatePkg), 'set GATE_DIST, or run scripts/check-gate-parity.mjs first');
 const { createGate } = await import(pathToFileURL(gatePkg));
 
