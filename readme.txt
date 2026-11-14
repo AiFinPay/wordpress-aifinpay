@@ -4,7 +4,7 @@ Tags: ai, crawlers, paywall, http 402, agents
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.2.0
+Stable tag: 0.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -74,6 +74,10 @@ Terms: https://aifinpay.io/terms — Privacy: https://aifinpay.io/privacy
 The pages this plugin serves to agents (the HTTP 402 body, `/llms.txt`) name further AiFinPay addresses, for the agent to use. Your server does not contact them.
 
 == Changelog ==
+
+= 0.2.1 =
+* The HTTP 402 no longer carries `protocol_fee_bps`. The fee is set per merchant and stated by the quote, as in @aifinpay/gate 0.11.0.
+* The connect code help names the dashboard page it is on: Profile & keys → API keys → Connect a CMS site.
 
 = 0.2.0 =
 * Path reading matches @aifinpay/gate 0.10: an escaped `?` or `#`, a `;` parameter or a dot segment that could hide where a page ends is refused for agents in Enforce; readers are served.
