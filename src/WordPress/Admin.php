@@ -256,7 +256,7 @@ final class Admin {
 						<th scope="row"><label for="aifinpay-connect-code"><?php esc_html_e( 'Connect code', 'aifinpay' ); ?></label></th>
 						<td>
 							<input type="text" id="aifinpay-connect-code" name="connect_code" class="regular-text" autocomplete="off" spellcheck="false" maxlength="40">
-							<p class="description"><?php esc_html_e( 'In the AiFinPay dashboard (dash.aifinpay.io) open your site, then Settings → API keys → Connect a CMS site. On save this site fetches a new API secret and keeps it on this server; the previous secret stops working.', 'aifinpay' ); ?></p>
+							<p class="description"><?php esc_html_e( 'In the AiFinPay dashboard (dash.aifinpay.io) open your site, then Profile & keys → API keys → Connect a CMS site. On save this site fetches a new API secret and keeps it on this server; the previous secret stops working.', 'aifinpay' ); ?></p>
 						</td>
 					</tr>
 					<tr>
