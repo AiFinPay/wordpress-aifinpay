@@ -307,6 +307,27 @@ final class AdapterTest extends TestCase {
 		self::assertSame( [], Resources::failed() );
 	}
 
+	public function testTheSettingsPageFitsTheLinesAndDrawsOnlyPathsAsPaths(): void {
+		wp_set_current_user( 1 );
+		$page = function ( int $lines ): string {
+			$this->settings( [ 'mode' => 'shadow', 'protected_paths' => array_map( static fn ( int $i ): string => "/p$i", range( 1, $lines ) ), 'path_tiers' => [ '/p1' => 'premium' ] ] );
+			ob_start();
+			try {
+				Admin::render();
+			} finally {
+				$html = (string) ob_get_clean();
+			}
+			return $html;
+		};
+		$html = $page( 9 );
+		self::assertMatchesRegularExpression( '~<textarea id="aifinpay-protected" name="protected_paths" rows="10"[^>]*>/p1 premium\n/p2\n~', $html );
+		self::assertStringContainsString( '<td><code style="white-space:nowrap">/p1</code></td>', $html );
+		self::assertMatchesRegularExpression( '~<td>REST API and feed</td>\s*<td>Premium: \$0\.005 per request, in Enforce\.~', $html );
+		self::assertStringContainsString( 'rows="4"', $page( 1 ) );
+		self::assertStringContainsString( 'rows="12"', $page( 30 ) );
+		wp_set_current_user( 0 );
+	}
+
 	public function testEachPatternIsRegisteredWithItsOwnTier(): void {
 		$this->connect();
 		$this->responder = static fn () => [ 201, '{}' ];

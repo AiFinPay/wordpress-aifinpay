@@ -110,12 +110,7 @@ final class Paths {
 		return [ 'valid' => array_keys( $valid ), 'invalid' => $invalid ];
 	}
 
-	/**
-	 * Protected path lines: a pattern, optionally followed by standard, complex or premium.
-	 * `tiers` holds only the levels written out; a pattern given two prices is a conflict.
-	 *
-	 * @return array{valid: string[], tiers: array<string, string>, invalid: string[], conflicts: string[]}
-	 */
+	/** Protected path lines: a pattern, then optionally standard, complex or premium; `tiers` holds only those written out. */
 	public static function parsePriced( string $text ): array {
 		$valid     = [];
 		$invalid   = [];
@@ -163,13 +158,11 @@ final class Paths {
 	}
 
 	/**
-	 * The dearest spelling of this request that is protected and not excluded, the first
-	 * on a tie; the page before an escaped mark when it is dearer or nothing else is
-	 * protected, as matchResource() in @aifinpay/gate. `path` is what a receipt must cover.
+	 * The dearest protected, unexcluded spelling (the first on a tie), or the page before an escaped mark when dearer, as matchResource() in @aifinpay/gate.
 	 *
 	 * @param string[]              $candidates The request path, then the canonical path of what it resolved to.
 	 * @param array<string, string> $tiers      Pattern => tier; without it every pattern costs the same.
-	 * @return array{rule: string, path: string}|null
+	 * @return array{rule: string, path: string}|null `path` is what a receipt must cover.
 	 */
 	public static function resolve( array $candidates, array $protected, array $excluded, array $tiers = [] ): ?array {
 		$own    = self::dearest( $candidates, $protected, $excluded, $tiers );

@@ -90,6 +90,8 @@ const unit = [
   ['prices', 'a new price is not registered again', 'src/WordPress/Resources.php', " || ( $state['tiers'] ?? null ) !== Settings::tiers( $settings )", ""],
   ['prices', 'the price table shows the site-wide price for every path', 'src/WordPress/Admin.php', "isset( $settings['path_tiers'][ $pattern ] ) ? $price( $settings['path_tiers'][ $pattern ] ) : ", ""],
   ['prices', 'the price table shows the REST API and feed at the site-wide price', 'src/WordPress/Admin.php', "$price( Settings::alternatesTier( $settings ) )", "$price( $settings['tier'] )"],
+  ['prices', 'the box is four lines whatever it holds', 'src/WordPress/Admin.php', "min( 12, max( 4, count( $settings['protected_paths'] ) + 1 ) )", "4"],
+  ['prices', 'a label is drawn as a path', 'src/WordPress/Admin.php', "<?php if ( str_starts_with( $path, '/' ) ) : ?>", "<?php if ( true ) : ?>"],
   ['prices', 'the meter takes the price from the receipt', 'src/Core/ReceiptGate.php', "$this->meter->spend( $merchant, $p['receipt_id'], $weight, $limit,", "$this->meter->spend( $merchant, $p['receipt_id'], Pricing::TIER_WEIGHTS[ $p['tier'] ?? '' ] ?? 1, $limit,"],
   ['events', 'a rejected credential drops the events', 'src/WordPress/EventDelivery.php', " || 401 === $status || 403 === $status;", ";"],
   ['events', 'the raw User-Agent goes on the wire', 'src/WordPress/EventQueue.php', "'verified' => $event['verified'],", "'verified' => $event['verified'],\n\t\t\t'ua' => 'x',"],

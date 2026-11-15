@@ -325,7 +325,7 @@ final class Admin {
 					<tr>
 						<th scope="row"><label for="aifinpay-protected"><?php esc_html_e( 'Protected paths', 'aifinpay' ); ?></label></th>
 						<td>
-							<textarea id="aifinpay-protected" name="protected_paths" rows="4" class="large-text code"><?php echo esc_textarea( implode( "\n", Settings::protectedLines( $settings ) ) ); ?></textarea>
+							<textarea id="aifinpay-protected" name="protected_paths" rows="<?php echo esc_attr( (string) min( 12, max( 4, count( $settings['protected_paths'] ) + 1 ) ) ); ?>" class="large-text code"><?php echo esc_textarea( implode( "\n", Settings::protectedLines( $settings ) ) ); ?></textarea>
 							<p class="description"><?php esc_html_e( 'One exact path or /prefix/* per line. To give a path its own price, add standard, complex or premium after it, for example /reports/* premium. A path without one costs the price per request above. /* observes the whole site in Shadow without touching your page cache. A specific path is never page-cached, in Shadow too, so its counts are exact.', 'aifinpay' ); ?></p>
 						</td>
 					</tr>
@@ -346,7 +346,14 @@ final class Admin {
 							<table class="widefat striped" id="aifinpay-prices">
 								<tbody>
 								<?php foreach ( self::priceRows( $settings ) as [ $path, $price ] ) : ?>
-									<tr><td><code><?php echo esc_html( $path ); ?></code></td><td><?php echo esc_html( $price ); ?></td></tr>
+									<tr>
+										<?php if ( str_starts_with( $path, '/' ) ) : ?>
+											<td><code style="white-space:nowrap"><?php echo esc_html( $path ); ?></code></td>
+										<?php else : ?>
+											<td><?php echo esc_html( $path ); ?></td>
+										<?php endif; ?>
+										<td><?php echo esc_html( $price ); ?></td>
+									</tr>
 								<?php endforeach; ?>
 								</tbody>
 							</table>

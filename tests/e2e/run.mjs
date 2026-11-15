@@ -689,12 +689,13 @@ try {
     assert.deepEqual([out.stored.protected_paths, out.stored.path_tiers], [['/paid', '/docs/*', '/docs/a'], { '/docs/a': 'premium' }]);
     assert.equal(out.page.match(/<textarea id="aifinpay-protected"[^>]*>([^<]*)<\/textarea>/)[1], '/paid\n/docs/*\n/docs/a premium');
     const table = out.page.split('id="aifinpay-prices"')[1].split('</table>')[0];
-    assert.deepEqual([...table.matchAll(/<tr><td><code>([^<]*)<\/code><\/td><td>([^<]*)<\/td><\/tr>/g)].map((m) => [m[1], m[2]]), [
+    assert.deepEqual([...table.matchAll(/<td>(?:<code[^>]*>)?([^<]*)(?:<\/code>)?<\/td>\s*<td>([^<]*)<\/td>/g)].map((m) => [m[1], m[2]]), [
       ['/paid', 'Standard: $0.0005 per request, the site-wide price'],
       ['/docs/*', 'Standard: $0.0005 per request, the site-wide price'],
       ['/docs/a', 'Premium: $0.005 per request'],
       ['REST API and feed', 'Premium: $0.005 per request, in Enforce. They show the same posts, so they cost what your highest-priced page costs.'],
     ]);
+    assert.match(table, /<td>REST API and feed<\/td>/, 'a label, not drawn as a path');
     assert.match(out.page, /An AI agent prepays at least \$0\.02 at a time: 40 requests at Standard, 10 at Complex or 4 at Premium\./);
     assert.deepEqual(PRICED.map(([p]) => [p, state.resources.get(p)?.tier]), PRICED, 'each pattern is registered at its own price');
   });
