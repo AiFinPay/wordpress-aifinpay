@@ -46,6 +46,31 @@ for (const { headers, result } of agents.classify) {
   assert.deepEqual(edge.classifyAgent({ path: '/', method: 'GET', header: (n) => lower[n.toLowerCase()] }), result);
   checks++;
 }
+// A price per path: the gate in registry mode and the PHP core quote the same rule, tier and 402 for each path.
+const priced = [
+  [{ '/paid/*': 'standard', '/paid/premium/*': 'premium' }, ['/paid/a', '/paid/premium/x', '/PAID/PREMIUM/x', '/paid/premium', '/paid', '/paid/premium%3Fx', '/paid/premium%23x', '/paid/premiumx']],
+  [{ '/*': 'standard', '/report': 'premium' }, ['/report', '/report%3Fx', '/report%253Fx', '/Report%23x', '/report/x', '/']],
+  [{ '/*': 'premium', '/report': 'standard' }, ['/report%3Fx', '/report', '/other']],
+  [{ '/docs/*': 'complex', '/docs/a': 'premium', '/docs/a/*': 'standard' }, ['/docs/a', '/docs/a/b', '/docs/a%3Fb', '/docs/b', '/docs/a/b%3Fc', '/docs']],
+  [{ '/wp-json/aifinpay-demo/v1/*': 'standard', '/wp-json/aifinpay-demo/v1/gpu-job': 'complex', '/wp-json/aifinpay-demo/v1/license-record': 'premium' }, ['/wp-json/aifinpay-demo/v1/catalog', '/wp-json/aifinpay-demo/v1/gpu-job', '/wp-json/aifinpay-demo/v1/license-record', '/wp-json/aifinpay-demo/v1/license-record%3Fx', '/wp-json/aifinpay-demo/v1/gpu-job/1']],
+];
+const merchantId = 'mrch_0123456789abcdef';
+const crawler = (n) => (n.toLowerCase() === 'user-agent' ? 'Mozilla/5.0 (compatible; GPTBot/1.2; +https://openai.com/gptbot)' : undefined);
+for (const [tiers, paths] of priced) {
+  const resources = Object.entries(tiers).map(([route_pattern, tier]) => ({ route_pattern, tier }));
+  const registry = { neverLoaded: false, match: (p, o) => gate.matchResource(resources, p, o), operatorPolicy: () => null, networkMode: () => null };
+  const g = gate.createGate({ merchantId, registry, jwks: { keys: [] }, store: { incrBy: async () => 1 } });
+  for (const path of paths) {
+    const theirs = await g({ path, method: 'GET', header: crawler });
+    const ours = JSON.parse(php(`$t=json_decode(${phpString(JSON.stringify(tiers))},true);$s=AiFinPay\\Core\\Paths::resolve([AiFinPay\\Core\\Paths::inspect(${phpString(path)})['path']],array_keys($t),[],$t);echo json_encode($s?[$s['rule'],$t[$s['rule']],AiFinPay\\Core\\Json::encode(AiFinPay\\Core\\ReceiptGate::challenge('${merchantId}',$s['rule'],$t[$s['rule']],'https://api.aifinpay.io'))]:null);`));
+    const match = gate.matchResource(resources, path);
+    assert.ok(match && ours, `${path}: both price it`);
+    assert.deepEqual([ours[0], ours[1]], [match.route_pattern, match.tier], `${path}: rule and tier`);
+    assert.equal(theirs.status, 402, path);
+    assert.equal(ours[2], JSON.stringify(theirs.body), `${path}: the 402 bytes`);
+    checks++;
+  }
+}
 console.log(`@aifinpay/gate ${packaged}: ${checks} checks match the fixtures and the PHP core, byte for byte.`);
 
 function phpString(s) {

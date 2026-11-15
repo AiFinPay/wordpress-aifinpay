@@ -59,6 +59,15 @@ final class AgentParityTest extends TestCase {
 		);
 	}
 
+	public function testEachResourceCarriesItsOwnTier(): void {
+		$resources = Discovery::resources( [ '/pricing', '/resources/*', '/x' ], 'standard', [ '/resources/*' => 'premium', '/x' => 'gold' ] );
+		self::assertSame( [ 'standard', 'premium', 'standard' ], array_column( $resources, 'tier' ), 'an unknown tier falls back to the site-wide one' );
+		self::assertSame( [ '0.0005', '0.005', '0.0005' ], array_column( Discovery::x402Document( 'mrch_abc', $resources )['resources'], 'unit_price_usd' ) );
+		$llms = Discovery::llmsTxt( true, 'mrch_abc', $resources, 'Site', 'https://example.com' );
+		self::assertStringContainsString( "- https://example.com/pricing: standard, $0.0005 per request\n", $llms );
+		self::assertStringContainsString( "- https://example.com/resources/* (and everything under it): premium, $0.005 per request\n", $llms );
+	}
+
 	public function testLlmsTxtSaysTheMode(): void {
 		$shadow = Discovery::llmsTxt( false, null, Discovery::resources( [ '/pricing' ] ), "My\nSite", 'https://example.com/' );
 		self::assertStringStartsWith( "# My Site — access for AI agents\n", $shadow );

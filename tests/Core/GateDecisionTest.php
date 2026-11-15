@@ -5,6 +5,8 @@ declare(strict_types=1);
 use AiFinPay\Core\KeySet;
 use AiFinPay\Core\Meter;
 use AiFinPay\Core\MerchantRecord;
+use AiFinPay\Core\Paths;
+use AiFinPay\Core\Pricing;
 use AiFinPay\Core\Receipt;
 use AiFinPay\Core\ReceiptGate;
 use AiFinPay\Core\Request;
@@ -289,6 +291,71 @@ final class GateDecisionTest extends TestCase {
 		$seen = \AiFinPay\Core\Paths::resolve( [ '/report%3fx' ], [ '/report' ], [] );
 		$r    = self::request( [ 'aifp-receipt' => $this->token( [ 'resource' => '/report' ] ), 'aifp-agent-id' => self::AGENT ], false, self::HOST, '/report%3fx' );
 		self::assertSame( 200, $this->gate->enforce( $r, self::MERCHANT, self::charging(), $seen['rule'], $seen['path'], 'standard', self::NOW )['status'] );
+	}
+
+	private const PRICED = [ '/api/*' => 'standard', '/api/gpu-job' => 'complex', '/api/license-record' => 'premium' ];
+	private const PATH_AT = [ 'standard' => '/api/weather', 'complex' => '/api/gpu-job', 'premium' => '/api/license-record' ];
+
+	/** The protected lines /api/*, /api/gpu-job complex and /api/license-record premium, as FrontGate resolves them. */
+	private function priced( string $path, string $token ): array {
+		$seen = Paths::resolve( [ $path ], array_keys( self::PRICED ), [], self::PRICED );
+		$r    = self::request( [ 'aifp-receipt' => $token, 'aifp-agent-id' => self::AGENT, 'user-agent' => 'aifinpay-agent-node/2' ], false, self::HOST, $path );
+		return $this->gate->enforce( $r, self::MERCHANT, self::charging(), $seen['rule'], $seen['path'], self::PRICED[ $seen['rule'] ], self::NOW );
+	}
+
+	public static function batches(): array {
+		// Bought at, its minimum batch in requests, spent on a path priced at, calls it pays for there.
+		return [
+			'standard batch, complex path' => [ 'standard', 40, 'complex', 10 ],
+			'standard batch, premium path' => [ 'standard', 40, 'premium', 4 ],
+			'complex batch, premium path'  => [ 'complex', 10, 'premium', 4 ],
+			'standard batch, its own path' => [ 'standard', 40, 'standard', 40 ],
+			'complex batch, its own path'  => [ 'complex', 10, 'complex', 10 ],
+			'premium batch, its own path'  => [ 'premium', 4, 'premium', 4 ],
+		];
+	}
+
+	#[DataProvider( 'batches' )]
+	public function testABatchNeverPaysForADearerPathAtItsOwnPrice( string $bought, int $min, string $priced, int $calls ): void {
+		self::assertSame( $min, Pricing::MIN_REQUESTS[ $bought ] );
+		$units = $min * Pricing::TIER_WEIGHTS[ $bought ];
+		self::assertSame( [ 40, '0.02' ], [ $units, Pricing::unitsToUsd( $units ) ], 'every minimum batch is $0.02, 40 units of $0.0005' );
+		$token  = $this->token( [ 'resource' => '/api/*', 'tier' => $bought, 'unit_quota' => $units ] );
+		$served = 0;
+		while ( 200 === ( $d = $this->priced( self::PATH_AT[ $priced ], $token ) )['status'] ) {
+			$served++;
+			self::assertSame( (string) ( $units - $served * Pricing::TIER_WEIGHTS[ $priced ] ), $d['headers']['AIFP-Quota-Remaining'] );
+			self::assertLessThanOrEqual( $min * Pricing::TIER_WEIGHTS[ $bought ], $served * Pricing::TIER_WEIGHTS[ $priced ] );
+		}
+		self::assertSame( $calls, $served );
+		self::assertSame( Pricing::MIN_BATCH_UNITS, $served * Pricing::TIER_WEIGHTS[ $priced ] * Pricing::BASE_UNIT_MICRO, 'what was served costs the $0.02 paid, at this path\'s price' );
+		self::assertSame( 402, $d['status'] );
+		self::assertSame( [ ReceiptGate::DETAIL_QUOTA_EXHAUSTED, $priced, Pricing::MIN_REQUESTS[ $priced ] ], [ $d['body']['detail'], $d['body']['tier'], $d['body']['min_requests'] ] );
+	}
+
+	public function testWhatIsLeftOfACheapBatchDoesNotOpenADearerPathAndIsKept(): void {
+		$token = $this->token( [ 'resource' => '/api/*', 'tier' => 'standard', 'unit_quota' => 40 ] );
+		for ( $i = 0; $i < 35; $i++ ) {
+			self::assertSame( 200, $this->priced( '/api/weather', $token )['status'] );
+		}
+		$premium = $this->priced( '/api/license-record', $token );
+		self::assertSame( [ 402, 'premium', '/api/license-record' ], [ $premium['status'], $premium['body']['tier'], $premium['body']['resource'] ] );
+		self::assertSame( '1', $this->priced( '/api/gpu-job', $token )['headers']['AIFP-Quota-Remaining'], 'the 5 units left pay one complex call' );
+		self::assertSame( 402, $this->priced( '/api/gpu-job', $token )['status'], 'not two' );
+		self::assertSame( '0', $this->priced( '/api/weather', $token )['headers']['AIFP-Quota-Remaining'] );
+	}
+
+	public function testTheReceiptsOwnTierDoesNotSetThePrice(): void {
+		$claims = [ 'resource' => '/api/*', 'tier' => 'premium', 'unit_quota' => 40, 'receipt_id' => 'rcpt_claims_premium0' ];
+		self::assertSame( '30', $this->priced( '/api/license-record', $this->token( $claims ) )['headers']['AIFP-Quota-Remaining'] );
+		$legacy = [ 'resource' => '/api/*', 'tier' => 'standard', 'quota' => 40, 'unit_quota' => null, 'receipt_id' => 'rcpt_legacy_standard' ];
+		self::assertSame( '30', $this->priced( '/api/license-record', $this->token( $legacy ) )['headers']['AIFP-Quota-Remaining'], 'a request-count batch converts at the tier it was bought at' );
+	}
+
+	public function testABatchForTheCheapPageItselfDoesNotOpenTheDearOne(): void {
+		$d = $this->priced( '/api/license-record', $this->token( [ 'resource' => '/api/weather', 'unit_quota' => 40 ] ) );
+		self::assertSame( 403, $d['status'] );
+		self::assertSame( [], $this->meter->used );
 	}
 
 	public function testAReceiptNamesItsResourceAsAPathIsRead(): void {

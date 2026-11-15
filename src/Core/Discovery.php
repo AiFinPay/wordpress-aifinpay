@@ -35,14 +35,14 @@ final class Discovery {
 		return 'text/html' === $type || 'application/xhtml+xml' === $type;
 	}
 
-	/** Protected patterns as gate resources: "/x/*" is a prefix scope. */
-	public static function resources( array $patterns, string $tier = 'standard' ): array {
+	/** Protected patterns as gate resources, each at its own tier if `$tiers` names one: "/x/*" is a prefix scope. */
+	public static function resources( array $patterns, string $tier = 'standard', array $tiers = [] ): array {
 		$resources = [];
 		foreach ( $patterns as $pattern ) {
 			if ( is_string( $pattern ) && Paths::validPattern( $pattern ) ) {
 				$resources[] = [
 					'resource' => $pattern,
-					'tier'     => $tier,
+					'tier'     => Pricing::isTier( $tiers[ $pattern ] ?? null ) ? $tiers[ $pattern ] : $tier,
 					'scope'    => str_ends_with( $pattern, '/*' ) ? 'prefix' : 'exact',
 				];
 			}
@@ -95,7 +95,8 @@ final class Discovery {
 			'',
 		];
 		foreach ( $resources as $r ) {
-			$lines[] = '- ' . $base . $r['resource'] . ( 'prefix' === $r['scope'] ? ' (and everything under it)' : '' );
+			$tier    = $r['tier'] ?? 'standard';
+			$lines[] = '- ' . $base . $r['resource'] . ( 'prefix' === $r['scope'] ? ' (and everything under it)' : '' ) . ': ' . $tier . ', $' . ( Pricing::UNIT_PRICE_USD[ $tier ] ?? '0.0005' ) . ' per request';
 		}
 		if ( ! $resources ) {
 			$lines[] = 'No protected paths are configured.';

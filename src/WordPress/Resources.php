@@ -16,6 +16,7 @@ final class Resources {
 			return;
 		}
 		$patterns = Settings::patterns( $settings );
+		$tiers    = Settings::tiers( $settings );
 		$failed   = [];
 		foreach ( $patterns as $pattern ) {
 			$response = Api::request(
@@ -26,7 +27,7 @@ final class Resources {
 					[
 						'route_pattern' => $pattern,
 						'type'          => str_starts_with( $pattern, Settings::restPath() . '/' ) ? 'api' : 'page',
-						'tier'          => $settings['tier'],
+						'tier'          => $tiers[ $pattern ],
 						'upsert'        => true,
 					],
 					JSON_UNESCAPED_SLASHES
@@ -37,13 +38,13 @@ final class Resources {
 				$failed[] = $pattern;
 			}
 		}
-		update_option( self::STATE, [ 'patterns' => $patterns, 'tier' => $settings['tier'], 'failed' => $failed, 'at' => time() ], false );
+		update_option( self::STATE, [ 'patterns' => $patterns, 'tiers' => $tiers, 'failed' => $failed, 'at' => time() ], false );
 	}
 
 	/** After a failed registration, or settings changed outside the form. */
 	public static function retryIfNeeded( array $settings ): void {
 		$state = get_option( self::STATE );
-		if ( ! is_array( $state ) || $state['failed'] || $state['patterns'] !== Settings::patterns( $settings ) || $state['tier'] !== $settings['tier'] ) {
+		if ( ! is_array( $state ) || $state['failed'] || $state['patterns'] !== Settings::patterns( $settings ) || ( $state['tiers'] ?? null ) !== Settings::tiers( $settings ) ) {
 			self::sync( $settings );
 		}
 	}

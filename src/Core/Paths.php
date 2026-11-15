@@ -110,6 +110,29 @@ final class Paths {
 		return [ 'valid' => array_keys( $valid ), 'invalid' => $invalid ];
 	}
 
+	/** Protected path lines: a pattern, then optionally standard, complex or premium; `tiers` holds only those written out. */
+	public static function parsePriced( string $text ): array {
+		$valid     = [];
+		$invalid   = [];
+		$conflicts = [];
+		foreach ( preg_split( '/\r\n|\r|\n/', $text ) ?: [] as $line ) {
+			$words = preg_split( '/\s+/', strtolower( trim( $line ) ), -1, PREG_SPLIT_NO_EMPTY ) ?: [];
+			if ( ! $words ) {
+				continue;
+			}
+			$pattern = self::ALL === $words[0] || '/' === $words[0] ? $words[0] : rtrim( $words[0], '/' );
+			$tier    = $words[1] ?? null;
+			if ( count( $words ) > 2 || ! self::validPattern( $pattern ) || ( null !== $tier && ! Pricing::isTier( $tier ) ) ) {
+				$invalid[] = implode( ' ', $words );
+			} elseif ( array_key_exists( $pattern, $valid ) && $valid[ $pattern ] !== $tier ) {
+				$conflicts[ $pattern ] = true;
+			} else {
+				$valid[ $pattern ] = $tier;
+			}
+		}
+		return [ 'valid' => array_keys( $valid ), 'tiers' => array_filter( $valid ), 'invalid' => $invalid, 'conflicts' => array_keys( $conflicts ) ];
+	}
+
 	public static function covers( string $pattern, string $path ): bool {
 		if ( ! str_ends_with( $pattern, '/*' ) ) {
 			return $path === $pattern;
@@ -135,29 +158,35 @@ final class Paths {
 	}
 
 	/**
-	 * The first spelling of this request that is protected and not excluded; failing
-	 * that, the page before an escaped mark. `path` is what a receipt must cover.
+	 * The dearest protected, unexcluded spelling (the first on a tie), or the page before an escaped mark when dearer, as matchResource() in @aifinpay/gate.
 	 *
-	 * @param string[] $candidates The request path, then the canonical path of what it resolved to.
-	 * @return array{rule: string, path: string}|null
+	 * @param string[]              $candidates The request path, then the canonical path of what it resolved to.
+	 * @param array<string, string> $tiers      Pattern => tier; without it every pattern costs the same.
+	 * @return array{rule: string, path: string}|null `path` is what a receipt must cover.
 	 */
-	public static function resolve( array $candidates, array $protected, array $excluded ): ?array {
-		return self::firstProtected( $candidates, $protected, $excluded )
-			?? self::firstProtected( array_filter( array_map( [ self::class, 'beforeMark' ], $candidates ) ), $protected, $excluded );
+	public static function resolve( array $candidates, array $protected, array $excluded, array $tiers = [] ): ?array {
+		$own    = self::dearest( $candidates, $protected, $excluded, $tiers );
+		$before = self::dearest( array_filter( array_map( [ self::class, 'beforeMark' ], $candidates ) ), $protected, $excluded, $tiers );
+		return null === $own || ( null !== $before && self::weight( $before, $tiers ) > self::weight( $own, $tiers ) ) ? $before : $own;
 	}
 
-	private static function firstProtected( array $candidates, array $protected, array $excluded ): ?array {
+	private static function dearest( array $candidates, array $protected, array $excluded, array $tiers ): ?array {
 		foreach ( $candidates as $path ) {
 			if ( null !== self::match( $path, $excluded ) ) {
 				return null;
 			}
 		}
+		$best = null;
 		foreach ( $candidates as $path ) {
 			$rule = self::match( $path, $protected );
-			if ( null !== $rule ) {
-				return [ 'rule' => $rule, 'path' => $path ];
+			if ( null !== $rule && ( null === $best || self::weight( [ 'rule' => $rule ], $tiers ) > self::weight( $best, $tiers ) ) ) {
+				$best = [ 'rule' => $rule, 'path' => $path ];
 			}
 		}
-		return null;
+		return $best;
+	}
+
+	private static function weight( array $resolved, array $tiers ): int {
+		return Pricing::TIER_WEIGHTS[ $tiers[ $resolved['rule'] ] ?? '' ] ?? 0;
 	}
 }

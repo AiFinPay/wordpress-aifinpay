@@ -57,9 +57,10 @@ final class FrontGate {
 			// /?feed=rss2 and every archive's feed carry the same posts as the main feed.
 			$candidates[] = Settings::homePath() . '/feed';
 		}
-		$resolved = Paths::resolve( $candidates, Settings::patterns( $settings ), self::excluded( $settings ) );
+		$tiers    = Settings::tiers( $settings );
+		$resolved = Paths::resolve( $candidates, Settings::patterns( $settings ), self::excluded( $settings ), $tiers );
 		if ( null !== $resolved ) {
-			self::run( $request, $resolved['rule'], $resolved['path'], $settings );
+			self::run( $request, $resolved['rule'], $resolved['path'], $tiers[ $resolved['rule'] ], $settings );
 		}
 	}
 
@@ -85,9 +86,10 @@ final class FrontGate {
 		self::refuseIfAmbiguous( $request, $request->ambiguous || $seen['ambiguous'], $settings );
 		$path     = $seen['path'];
 		$patterns = array_filter( Settings::patterns( $settings ), static fn ( string $p ): bool => str_starts_with( $p, $rest . '/' ) );
-		$resolved = Paths::resolve( [ $path ], $patterns, $settings['excluded_paths'] );
+		$tiers    = Settings::tiers( $settings );
+		$resolved = Paths::resolve( [ $path ], $patterns, $settings['excluded_paths'], $tiers );
 		if ( null !== $resolved ) {
-			self::run( $request, $resolved['rule'], $resolved['path'], $settings );
+			self::run( $request, $resolved['rule'], $resolved['path'], $tiers[ $resolved['rule'] ], $settings );
 		}
 	}
 
@@ -103,7 +105,7 @@ final class FrontGate {
 			return;
 		}
 		$merchant  = Connection::merchantId();
-		$resources = Discovery::resources( Settings::patterns( $settings ), $settings['tier'] );
+		$resources = Discovery::resources( Settings::patterns( $settings ), $settings['tier'], Settings::tiers( $settings ) );
 		if ( $home . Discovery::LLMS_TXT_PATH === $request->path ) {
 			$type = 'text/markdown; charset=utf-8';
 			$body = Discovery::llmsTxt( 'enforce' === $settings['mode'], '' !== $merchant ? $merchant : null, $resources, wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ), home_url() );
@@ -147,11 +149,11 @@ final class FrontGate {
 		return [ ...$settings['excluded_paths'], $home . Discovery::LLMS_TXT_PATH, $home . '/.well-known/*' ];
 	}
 
-	private static function run( Request $request, string $rule, string $path, array $settings ): void {
+	private static function run( Request $request, string $rule, string $path, string $tier, array $settings ): void {
 		$reader = AgentIdentity::isReader( $request );
 		if ( 'shadow' === $settings['mode'] ) {
 			try {
-				self::shadow( $request, $rule, $path, $reader, $settings );
+				self::shadow( $request, $rule, $path, $tier, $reader, $settings );
 			} catch ( \Throwable ) {
 				// Observing never breaks a page.
 				return;
@@ -163,7 +165,7 @@ final class FrontGate {
 			$merchant = Connection::merchantId();
 			$charging = $reader ? MerchantRecord::charging( '', null ) : MerchantRecord::charging( $merchant, RecordStore::get() );
 			$gate     = new ReceiptGate( new WpKeySet(), new WpdbMeter(), Api::origin() );
-			$decision = $gate->enforce( $request, $merchant, $charging, $rule, $path, $settings['tier'], time() );
+			$decision = $gate->enforce( $request, $merchant, $charging, $rule, $path, $tier, time() );
 		} catch ( \Throwable ) {
 			$decision = [ 'status' => 503, 'body' => [ 'error' => 'payment_service_unavailable' ], 'headers' => [], 'event' => null, 'outcome' => 'refused', 'units' => 0 ];
 		}
@@ -194,7 +196,7 @@ final class FrontGate {
 		exit;
 	}
 
-	private static function shadow( Request $request, string $rule, string $path, bool $reader, array $settings ): void {
+	private static function shadow( Request $request, string $rule, string $path, string $tier, bool $reader, array $settings ): void {
 		// The site-wide default leaves readers' caching alone; a path the owner chose is measured exactly.
 		if ( Paths::ALL !== $rule || ! $reader ) {
 			CacheCompat::forbid();
@@ -203,7 +205,7 @@ final class FrontGate {
 		// Only a presented receipt reads the record or the keys: observing costs no request otherwise.
 		$network  = ! $reader && '' !== (string) $request->header( 'AIFP-Receipt' ) && '' !== $merchant ? ( RecordStore::get()['network_mode'] ?? null ) : null;
 		$gate     = new ReceiptGate( new WpKeySet(), new WpdbMeter(), Api::origin() );
-		$decision = $gate->shadow( $request, $merchant, $network, $rule, $path, $settings['tier'], time() );
+		$decision = $gate->shadow( $request, $merchant, $network, $rule, $path, $tier, time() );
 		foreach ( $decision['headers'] as $name => $value ) {
 			header( $name . ': ' . $value );
 		}
