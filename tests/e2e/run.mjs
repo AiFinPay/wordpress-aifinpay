@@ -183,7 +183,7 @@ const flushRecord = () => wp('transient', 'delete', 'aifinpay_record');
 // ── Run ────────────────────────────────────────────────────────────────────
 const gatePkg = join(process.env.GATE_DIST ?? join(root, '.local/gate-0.11.0/node_modules/@aifinpay/gate/dist'), 'index.js');
 assert.ok(existsSync(gatePkg), 'set GATE_DIST, or run scripts/check-gate-parity.mjs first');
-const { createGate } = await import(pathToFileURL(gatePkg));
+const { createGate, matchResource, buildDiscoveryDocument, MemoryStore } = await import(pathToFileURL(gatePkg));
 
 
 execFileSync(join(root, 'scripts/setup-wp.sh'), db === 'mysql' ? [name, String(PORT), 'mysql', DBHOST] : [name, String(PORT), 'sqlite'], { stdio: 'inherit' });
@@ -670,6 +670,119 @@ try {
     const byKind = Object.fromEntries(state.events.map((e) => [e.kind, e]));
     assert.deepEqual([byKind['402'].operator, byKind['402'].verified], ['openai', false]);
     assert.deepEqual([byKind.serve.operator, byKind.serve.ua_class, byKind.serve.verified], ['aifinpay', 'aifp_agent', true]);
+  });
+
+  // ── A price per path ─────────────────────────────────────────────────────
+  const PRICED = [['/paid', 'standard'], ['/docs/*', 'standard'], ['/docs/a', 'premium'], ['/wp-json/wp/v2/*', 'premium'], ['/feed/*', 'premium']];
+  const registry = (rows) => ({ neverLoaded: false, match: (p, o) => matchResource(rows.map(([route_pattern, tier]) => ({ route_pattern, tier })), p, o), operatorPolicy: () => null, networkMode: () => 'test' });
+  const agentHeaders = (token) => (n) => ({ 'aifp-receipt': token, 'aifp-agent-id': AGENT, 'user-agent': 'aifinpay-agent-node/2.14' })[n.toLowerCase()];
+  const buy = async (asked) => {
+    const challenge = JSON.parse((await get(asked, GPTBOT)).body);
+    const quoteUrl = challenge.settlement_terms_from.match(/POST (\S+)/)[1];
+    const call = (url, body) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(async (r) => { assert.equal(r.status, 200, await r.clone().text()); return r.json(); });
+    const quote = await call(quoteUrl, { merchant_id: challenge.merchant_id, resource: challenge.resource, tier: challenge.tier, scope: challenge.scope, requests: challenge.min_requests, payer: AGENT });
+    return { challenge, quoteUrl, receipt: (await call(quoteUrl.replace('/v1/quote', '/v1/pay'), { quote })).receipt };
+  };
+  await check('prices', 'a protected line takes its own price, and the page says what each path costs', async () => {
+    const out = await submit({ protected_paths: '/paid\n/docs/*\n/docs/a   Premium' });
+    assert.equal(errors(out), '');
+    assert.deepEqual([out.stored.protected_paths, out.stored.path_tiers], [['/paid', '/docs/*', '/docs/a'], { '/docs/a': 'premium' }]);
+    assert.equal(out.page.match(/<textarea id="aifinpay-protected"[^>]*>([^<]*)<\/textarea>/)[1], '/paid\n/docs/*\n/docs/a premium');
+    const table = out.page.split('id="aifinpay-prices"')[1].split('</table>')[0];
+    assert.deepEqual([...table.matchAll(/<tr><td><code>([^<]*)<\/code><\/td><td>([^<]*)<\/td><\/tr>/g)].map((m) => [m[1], m[2]]), [
+      ['/paid', 'Standard: $0.0005 per request, the site-wide price'],
+      ['/docs/*', 'Standard: $0.0005 per request, the site-wide price'],
+      ['/docs/a', 'Premium: $0.005 per request'],
+      ['REST API and feed', 'Premium: $0.005 per request, in Enforce. They show the same posts, so they cost what your highest-priced page costs.'],
+    ]);
+    assert.match(out.page, /An AI agent prepays at least \$0\.02 at a time: 40 requests at Standard, 10 at Complex or 4 at Premium\./);
+    assert.deepEqual(PRICED.map(([p]) => [p, state.resources.get(p)?.tier]), PRICED, 'each pattern is registered at its own price');
+  });
+  await check('prices', 'each path answers the 402 @aifinpay/gate sends for the same price list, byte for byte', async () => {
+    const gate = createGate({ merchantId: MERCHANT, registry: registry(PRICED), apiBase, jwks: { keys: [] }, store: { incrBy: async () => 1 } });
+    for (const [asked, path, tier] of [['/docs/a/', '/docs/a', 'premium'], ['/docs/', '/docs', 'standard'], ['/paid/', '/paid', 'standard'], ['/wp-json/wp/v2/pages', '/wp-json/wp/v2/pages', 'premium'], ['/feed/', '/feed', 'premium']]) {
+      const r = await get(asked, GPTBOT);
+      assert.equal(r.status, 402, asked);
+      assert.equal(r.body.includes(MARK), false, asked);
+      const theirs = await gate({ path, header: (n) => (n.toLowerCase() === 'user-agent' ? GPTBOT : undefined) });
+      assert.equal(r.body, JSON.stringify(theirs.body), asked);
+      assert.equal(JSON.parse(r.body).tier, tier, asked);
+    }
+  });
+  await check('prices', 'the quote takes the price the 402 names, and the batch it buys is metered at that price', async () => {
+    const { challenge, quoteUrl, receipt } = await buy('/docs/a/');
+    assert.deepEqual([challenge.resource, challenge.tier, challenge.unit_price_usd, challenge.min_requests], ['/docs/a', 'premium', '0.005', 4]);
+    const cheap = await fetch(quoteUrl, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ merchant_id: MERCHANT, resource: '/docs/a', tier: 'standard', scope: 'exact', requests: 40, payer: AGENT }) });
+    assert.equal(cheap.status, 400, 'AiFinPay knows /docs/a at premium, so a standard quote for it is refused');
+    for (const left of ['30', '20', '10', '0']) {
+      const r = await pay('/docs/a/', receipt);
+      assert.equal(r.status, 200);
+      assert.match(r.body, new RegExp(MARK));
+      assert.equal(r.headers['aifp-quota-remaining'], left);
+    }
+    assert.equal((await pay('/docs/a/', receipt)).status, 402, '4 premium requests, then the next batch');
+  });
+  await check('prices', 'a $0.02 standard batch opens the premium page only at the premium price: 4 requests, as the published gate meters it', async () => {
+    const { challenge, receipt } = await buy('/docs/');
+    assert.deepEqual([challenge.resource, challenge.tier, challenge.min_requests], ['/docs/*', 'standard', 40]);
+    const twin = createGate({ merchantId: MERCHANT, registry: registry(PRICED), apiBase, jwks: { keys: [jwk] }, store: new MemoryStore(), networkMode: 'test' });
+    const ours = [];
+    const theirs = [];
+    for (let i = 0; i < 5; i++) {
+      const r = await pay('/docs/a/', receipt);
+      ours.push([r.status, r.headers['aifp-quota-remaining'] ?? JSON.parse(r.body).detail]);
+      const t = await twin({ path: '/docs/a', header: agentHeaders(receipt) });
+      theirs.push([t.status, t.headers['AIFP-Quota-Remaining'] ?? t.body.detail]);
+    }
+    assert.deepEqual(ours, [[200, '30'], [200, '20'], [200, '10'], [200, '0'], [402, 'quota exhausted — prepay the next batch']]);
+    assert.deepEqual(ours, theirs);
+    const next = JSON.parse((await pay('/docs/a/', receipt)).body);
+    assert.deepEqual([next.tier, next.resource, next.min_requests], ['premium', '/docs/a', 4], 'the 402 asks for a premium batch');
+  });
+  await check('prices', 'what is left of a cheap batch does not open the dearer page and stays spendable', async () => {
+    const token = mint({ resource: '/docs/*', unit_quota: 5 });
+    const r = await pay('/docs/a/', token);
+    assert.equal(r.status, 402);
+    assert.equal(r.body.includes(MARK), false);
+    assert.equal((await pay('/docs/', token)).headers['aifp-quota-remaining'], '4');
+  });
+  await check('prices', 'x402.json and llms.txt name each path\'s price', async () => {
+    const r = await get('/.well-known/x402.json', GPTBOT);
+    const doc = JSON.parse(r.body);
+    assert.deepEqual(doc.resources.map((x) => [x.resource, x.tier]), PRICED);
+    assert.deepEqual(doc.resources.map((x) => x.unit_price_usd), ['0.0005', '0.0005', '0.005', '0.005', '0.005']);
+    assert.equal(r.body, JSON.stringify(buildDiscoveryDocument({ merchantId: MERCHANT, apiBase, resources: doc.resources.map(({ resource, tier, scope }) => ({ resource, tier, scope })) })), 'the published gate builds the same document');
+    const llms = (await get('/llms.txt', GPTBOT)).body;
+    assert.ok(llms.includes(`- ${base}/docs/a: premium, $0.005 per request\n`), llms);
+    assert.ok(llms.includes(`- ${base}/docs/* (and everything under it): standard, $0.0005 per request\n`), llms);
+  });
+  await check('prices', 'a line the plugin cannot price is refused with the reason, and nothing changes', async () => {
+    for (const [box, reason] of [
+      ['/paid\n/docs/a gold', /these lines are not valid: \/docs\/a gold\./],
+      ['/paid\n/docs/a premium please', /these lines are not valid: \/docs\/a premium please\./],
+      ['/docs/a premium\n/docs/a/ complex', /listed twice with different prices: \/docs\/a\./],
+    ]) {
+      const out = await submit({ protected_paths: box });
+      assert.match(errors(out), reason);
+      assert.deepEqual([out.stored.protected_paths, out.stored.path_tiers], [['/paid', '/docs/*', '/docs/a'], { '/docs/a': 'premium' }], box);
+    }
+  });
+  await check('prices', 'Shadow counts a would-be 402 at the path\'s own price', async () => {
+    assert.equal((await submit({ mode: 'shadow' })).stored.mode, 'shadow');
+    const units = () => wpEval(`global $wpdb; echo (int) $wpdb->get_var($wpdb->prepare("SELECT SUM(units) FROM %i WHERE resource = %s AND outcome = 'shadow'", AiFinPay\\WordPress\\Schema::traffic(), '/docs/a'));`);
+    const before = Number(await units());
+    const r = await get('/docs/a/', GPTBOT);
+    assert.deepEqual([r.status, r.headers['aifp-shadow-status']], [200, '402']);
+    assert.equal(Number(await units()) - before, 10);
+    assert.equal((await submit({ mode: 'enforce' })).stored.mode, 'enforce');
+  });
+  await check('prices', 'without its own price a path goes back to the site-wide one', async () => {
+    const out = await submit({ protected_paths: '/paid\n/docs/*' });
+    assert.deepEqual(out.stored.path_tiers, []);
+    for (const [asked, resource] of [['/docs/a/', '/docs/*'], ['/wp-json/wp/v2/pages', '/wp-json/wp/v2/*']]) {
+      const body = JSON.parse((await get(asked, GPTBOT)).body);
+      assert.deepEqual([body.resource, body.tier], [resource, 'standard'], asked);
+    }
   });
 
   // ── Enforce: approval and host, live from the record ─────────────────────

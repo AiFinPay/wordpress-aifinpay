@@ -51,6 +51,14 @@ A specific path you list is never page-cached, in Shadow and in Enforce, for any
 
 The plugin works with WP Rocket, W3 Total Cache, WP Super Cache, LiteSpeed Cache and Cloudflare APO, and clears them when the mode or the paths change.
 
+= Can each path have its own price? =
+
+Yes. Under **Protected paths**, add `standard`, `complex` or `premium` after a path, for example `/reports/* premium`. A path without one costs the **Price per request** you chose for the site. When two lines cover the same page, the more specific one sets the price: an exact path before a `/prefix/*`, a longer prefix before a shorter one. **Price of each path** on the settings page shows what each one costs.
+
+In Enforce the REST API and the feed show the same posts as your pages, so they cost what your highest-priced page path costs.
+
+An agent prepays at least $0.02 at a time. The batch is counted in units of $0.0005, so the same $0.02 pays for 40 Standard, 10 Complex or 4 Premium requests: a batch bought at a lower price never pays a dearer request at its own price.
+
 = Is my secret safe? =
 
 The API secret is stored in the WordPress database of this site. It is never shown again, logged or sent to a browser. Connecting rotates the secret, so a secret used elsewhere for the same site stops working. Uninstalling deletes it.
@@ -66,7 +74,7 @@ This plugin connects to the AiFinPay API at `https://api.aifinpay.io`, operated 
 * **Connect:** when you save a connect code, the code is sent to `POST /v1/merchants/connect`. The answer is your merchant ID and API secret.
 * **Site record:** once connected, the public record of your site is read from `GET /v1/merchants/{id}` when you open the settings page, in Enforce, and in Shadow when an agent presents a receipt, at most every five minutes. It sends no site data.
 * **Receipt keys:** once connected, when an agent presents a receipt, the public signing keys are read from `/.well-known/jwks.json` at most every ten minutes, in Shadow too: Shadow checks the receipt and spends nothing. It sends no site data.
-* **Resources:** when connected and you save settings with reporting or Enforce on, your protected path patterns and price tier are sent to `POST /v1/merchants/{id}/resources`.
+* **Resources:** when connected and you save settings with reporting or Enforce on, your protected path patterns, each with its price tier, are sent to `POST /v1/merchants/{id}/resources`.
 * **Agent requests, only if you tick Report to AiFinPay:** per AI-agent request on a protected path, the operator, agent class, path pattern and time are sent to `POST /v1/merchants/{id}/gate-events`. Never the User-Agent, IP address, full URL or page content. Readers are not reported.
 
 Terms: https://aifinpay.io/terms — Privacy: https://aifinpay.io/privacy

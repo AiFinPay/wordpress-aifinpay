@@ -56,6 +56,44 @@ final class AdapterTest extends TestCase {
 		self::assertSame( [ '/paid' ], Settings::patterns( $this->settings( [ 'protected_paths' => [ '/paid' ], 'mode' => 'enforce', 'charge_alternates' => false ] ) ) );
 	}
 
+	public function testAPathKeepsItsOwnPriceOnlyWhileListed(): void {
+		$s = $this->settings( [ 'protected_paths' => [ '/a', '/b/*' ], 'path_tiers' => [ '/b/*' => 'premium', '/gone' => 'premium', '/a' => 'gold' ] ] );
+		self::assertSame( [ '/b/*' => 'premium' ], $s['path_tiers'] );
+		self::assertSame( [ '/a', '/b/* premium' ], Settings::protectedLines( $s ) );
+		update_option( Settings::OPTION, [ 'protected_paths' => [ '/a' ], 'path_tiers' => 'premium' ] );
+		self::assertSame( [], Settings::get()['path_tiers'] );
+	}
+
+	public function testSettingsSavedBeforePerPathPricesKeepTheirPrice(): void {
+		update_option( Settings::OPTION, [ 'mode' => 'enforce', 'tier' => 'complex', 'protected_paths' => [ '/paid', '/docs/*' ], 'excluded_paths' => [], 'charge_alternates' => true ] );
+		self::assertSame( [ '/paid' => 'complex', '/docs/*' => 'complex', '/wp-json/wp/v2/*' => 'complex', '/feed/*' => 'complex' ], Settings::tiers( Settings::get() ) );
+	}
+
+	public function testTheRestApiAndFeedCostWhatTheDearestPagePathCosts(): void {
+		$s = $this->settings( [ 'mode' => 'enforce', 'protected_paths' => [ '/paid', '/reports/*', '/wp-json/shop/v1/*' ], 'path_tiers' => [ '/reports/*' => 'complex', '/wp-json/shop/v1/*' => 'premium' ] ] );
+		self::assertSame( [ '/paid' => 'standard', '/reports/*' => 'complex', '/wp-json/shop/v1/*' => 'premium', '/wp-json/wp/v2/*' => 'complex', '/feed/*' => 'complex' ], Settings::tiers( $s ), 'a REST route of its own carries no posts' );
+		$s = $this->settings( [ 'mode' => 'enforce', 'protected_paths' => [ '/wp-json/shop/v1/*' ], 'path_tiers' => [ '/wp-json/shop/v1/*' => 'premium' ] ] );
+		self::assertSame( 'standard', Settings::tiers( $s )['/wp-json/wp/v2/*'], 'no page path: the site-wide price' );
+		$s = $this->settings( [ 'mode' => 'enforce', 'protected_paths' => [ '/x', '/feed/*' ], 'path_tiers' => [ '/x' => 'premium', '/feed/*' => 'standard' ] ] );
+		self::assertSame( [ 'premium', 'premium', 'standard' ], [ Settings::tiers( $s )['/x'], Settings::tiers( $s )['/wp-json/wp/v2/*'], Settings::tiers( $s )['/feed/*'] ], 'the owner\'s own line wins' );
+		self::assertSame( [ '/x' => 'premium', '/feed/*' => 'standard' ], Settings::tiers( $this->settings( [ 'mode' => 'shadow' ] + $s ) ), 'Shadow gates no alternate' );
+	}
+
+	public function testThePricePageSaysWhatEachPathCosts(): void {
+		$s = $this->settings( [ 'mode' => 'enforce', 'tier' => 'standard', 'protected_paths' => [ '/wp-json/aifinpay-demo/v1/license-record', '/wp-json/aifinpay-demo/v1/*', '/reports/*' ], 'path_tiers' => [ '/wp-json/aifinpay-demo/v1/license-record' => 'premium', '/reports/*' => 'complex' ], 'excluded_paths' => [ '/wp-json/aifinpay-demo/v1/catalog' ] ] );
+		self::assertSame(
+			[
+				[ '/wp-json/aifinpay-demo/v1/license-record', 'Premium: $0.005 per request' ],
+				[ '/wp-json/aifinpay-demo/v1/*', 'Standard: $0.0005 per request, the site-wide price' ],
+				[ '/reports/*', 'Complex: $0.002 per request' ],
+				[ 'REST API and feed', 'Complex: $0.002 per request, in Enforce. They show the same posts, so they cost what your highest-priced page costs.' ],
+				[ '/wp-json/aifinpay-demo/v1/catalog', 'Free: excluded' ],
+			],
+			Admin::priceRows( $s )
+		);
+		self::assertNotContains( 'REST API and feed', array_column( Admin::priceRows( $this->settings( [ 'charge_alternates' => false ] + $s ) ), 0 ) );
+	}
+
 	public function testASubdirectorySiteKeepsItsPrefix(): void {
 		$home = static fn (): string => 'https://x.test/Blog/';
 		add_filter( 'home_url', $home );
@@ -267,6 +305,20 @@ final class AdapterTest extends TestCase {
 		self::assertSame( [ 'route_pattern' => '/paid', 'type' => 'page', 'tier' => 'premium', 'upsert' => true ], json_decode( $this->calls[0]['body'], true ) );
 		self::assertSame( 'api', json_decode( $this->calls[1]['body'], true )['type'] );
 		self::assertSame( [], Resources::failed() );
+	}
+
+	public function testEachPatternIsRegisteredWithItsOwnTier(): void {
+		$this->connect();
+		$this->responder = static fn () => [ 201, '{}' ];
+		$s               = $this->settings( [ 'mode' => 'enforce', 'protected_paths' => [ '/paid', '/reports/*' ], 'path_tiers' => [ '/reports/*' => 'premium' ] ] );
+		Resources::sync( $s );
+		$sent = array_map( static fn ( array $c ): array => json_decode( $c['body'], true ), $this->calls );
+		self::assertSame( [ '/paid' => 'standard', '/reports/*' => 'premium', '/wp-json/wp/v2/*' => 'premium', '/feed/*' => 'premium' ], array_column( $sent, 'tier', 'route_pattern' ) );
+		$this->calls = [];
+		Resources::retryIfNeeded( $s );
+		self::assertSame( [], $this->calls, 'nothing changed' );
+		Resources::retryIfNeeded( $this->settings( [ 'path_tiers' => [ '/reports/*' => 'complex' ] ] + $s ) );
+		self::assertSame( 'complex', array_column( array_map( static fn ( array $c ): array => json_decode( $c['body'], true ), $this->calls ), 'tier', 'route_pattern' )['/reports/*'], 'a new price is registered again' );
 	}
 
 	public function testNothingIsRegisteredWithoutAReasonToSendIt(): void {

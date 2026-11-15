@@ -128,6 +128,50 @@ final class PathsTest extends TestCase {
 		);
 	}
 
+	public function testAProtectedLineMayCarryItsOwnPrice(): void {
+		self::assertSame(
+			[
+				'valid'     => [ '/wp-json/aifinpay-demo/v1/license-record', '/wp-json/aifinpay-demo/v1/*', '/reports/*', '/*' ],
+				'tiers'     => [ '/wp-json/aifinpay-demo/v1/license-record' => 'premium', '/reports/*' => 'complex' ],
+				'invalid'   => [],
+				'conflicts' => [],
+			],
+			Paths::parsePriced( " /wp-json/aifinpay-demo/v1/license-record   PREMIUM \r\n\n/wp-json/aifinpay-demo/v1/*\n/Reports/*\tcomplex\n/*\n/reports/* complex" )
+		);
+		self::assertSame( Paths::parseLines( " /Pricing/ \r\n\n/docs/*\n/pricing\n/*" )['valid'], Paths::parsePriced( " /Pricing/ \r\n\n/docs/*\n/pricing\n/*" )['valid'], 'lines without a price read as before' );
+	}
+
+	public function testAPriceThatCannotBeReadIsRefused(): void {
+		$parsed = Paths::parsePriced( "/a gold\n/a premium extra\npremium\n/a/ /b\n/a//b premium\n/ok standard\n/a Premium-ish" );
+		self::assertSame( [ '/a gold', '/a premium extra', 'premium', '/a/ /b', '/a//b premium', '/a premium-ish' ], $parsed['invalid'] );
+		self::assertSame( [ '/ok' ], $parsed['valid'] );
+		self::assertSame( [ '/a premium' ], Paths::parseLines( '/a premium' )['invalid'], 'an excluded path has no price' );
+	}
+
+	public function testAPathGivenTwoPricesIsAConflict(): void {
+		self::assertSame( [ '/a' ], Paths::parsePriced( "/a premium\n/a complex" )['conflicts'] );
+		self::assertSame( [ '/a' ], Paths::parsePriced( "/a\n/a/ premium\n/a complex" )['conflicts'], 'no price is a price too' );
+		self::assertSame( [], Paths::parsePriced( "/a premium\n/A/ premium" )['conflicts'] );
+	}
+
+	public function testTheDearestSpellingOfOnePageSetsThePrice(): void {
+		$protected = [ '/*', '/guide' ];
+		$tiers     = [ '/*' => 'standard', '/guide' => 'premium' ];
+		foreach ( [ [ '/2026/11/guide', '/guide' ], [ '/guide', '/2026/11/guide' ] ] as $candidates ) {
+			self::assertSame( [ 'rule' => '/guide', 'path' => '/guide' ], Paths::resolve( $candidates, $protected, [], $tiers ), $candidates[0] );
+		}
+		self::assertSame( [ 'rule' => '/*', 'path' => '/2026/11/guide' ], Paths::resolve( [ '/2026/11/guide', '/guide' ], $protected, [], [ '/*' => 'premium', '/guide' => 'premium' ] ), 'a tie keeps the first' );
+		self::assertSame( [ 'rule' => '/*', 'path' => '/2026/11/guide' ], Paths::resolve( [ '/2026/11/guide', '/guide' ], $protected, [] ), 'no prices: as before' );
+	}
+
+	public function testThePageBeforeAnEscapedMarkSetsThePriceWhenItIsDearer(): void {
+		$protected = [ '/report', '/*' ];
+		self::assertSame( [ 'rule' => '/report', 'path' => '/report' ], Paths::resolve( [ '/report%3fx' ], $protected, [], [ '/report' => 'premium', '/*' => 'standard' ] ) );
+		self::assertSame( [ 'rule' => '/*', 'path' => '/report%3fx' ], Paths::resolve( [ '/report%3fx' ], $protected, [], [ '/report' => 'standard', '/*' => 'premium' ] ) );
+		self::assertSame( [ 'rule' => '/*', 'path' => '/report%3fx' ], Paths::resolve( [ '/report%3fx' ], $protected, [], [ '/report' => 'complex', '/*' => 'complex' ] ), 'a tie keeps the page as asked' );
+		self::assertSame( [ 'rule' => '/*', 'path' => '/report%3fx' ], Paths::resolve( [ '/report%3fx' ], $protected, [ '/report' ], [ '/report' => 'premium', '/*' => 'standard' ] ), 'an excluded page before the mark is free, so the page keeps its own price' );
+	}
+
 	public function testResolveSeesTheCanonicalPathAndExclusionsWin(): void {
 		self::assertSame( [ 'rule' => '/paid', 'path' => '/paid' ], Paths::resolve( [ '/index.php/paid', '/paid' ], [ '/paid' ], [] ) );
 		self::assertNull( Paths::resolve( [ '/x', '/paid' ], [ '/paid' ], [ '/x' ] ) );

@@ -97,14 +97,23 @@ final class Admin {
 		if ( Pricing::isTier( $tier ) ) {
 			$next['tier'] = $tier;
 		}
-		foreach ( [ 'protected_paths', 'excluded_paths' ] as $key ) {
-			$parsed = Paths::parseLines( isset( $_POST[ $key ] ) ? sanitize_textarea_field( wp_unslash( $_POST[ $key ] ) ) : '' );
-			if ( $parsed['invalid'] ) {
-				/* translators: %s: the path patterns that were refused. */
-				$notices[] = [ 'error', sprintf( __( 'Not saved, these are not valid paths: %s. Use one exact path or /prefix/* per line.', 'aifinpay' ), implode( ', ', $parsed['invalid'] ) ) ];
-			} else {
-				$next[ $key ] = array_slice( $parsed['valid'], 0, 50 );
-			}
+		$priced = Paths::parsePriced( isset( $_POST['protected_paths'] ) ? sanitize_textarea_field( wp_unslash( $_POST['protected_paths'] ) ) : '' );
+		if ( $priced['invalid'] ) {
+			/* translators: %s: the lines that were refused. */
+			$notices[] = [ 'error', sprintf( __( 'Protected paths not saved, these lines are not valid: %s. Use one exact path or /prefix/* per line, optionally followed by standard, complex or premium.', 'aifinpay' ), implode( ', ', $priced['invalid'] ) ) ];
+		} elseif ( $priced['conflicts'] ) {
+			/* translators: %s: the paths that were given two prices. */
+			$notices[] = [ 'error', sprintf( __( 'Protected paths not saved, these paths are listed twice with different prices: %s. Keep one line for each.', 'aifinpay' ), implode( ', ', $priced['conflicts'] ) ) ];
+		} else {
+			$next['protected_paths'] = array_slice( $priced['valid'], 0, 50 );
+			$next['path_tiers']      = array_intersect_key( $priced['tiers'], array_flip( $next['protected_paths'] ) );
+		}
+		$parsed = Paths::parseLines( isset( $_POST['excluded_paths'] ) ? sanitize_textarea_field( wp_unslash( $_POST['excluded_paths'] ) ) : '' );
+		if ( $parsed['invalid'] ) {
+			/* translators: %s: the path patterns that were refused. */
+			$notices[] = [ 'error', sprintf( __( 'Excluded paths not saved, these are not valid paths: %s. Use one exact path or /prefix/* per line.', 'aifinpay' ), implode( ', ', $parsed['invalid'] ) ) ];
+		} else {
+			$next['excluded_paths'] = array_slice( $parsed['valid'], 0, 50 );
 		}
 		foreach ( [ 'charge_alternates', 'report_events', 'discovery_documents', 'discovery_link' ] as $key ) {
 			$next[ $key ] = ! empty( $_POST[ $key ] );
@@ -221,6 +230,22 @@ final class Admin {
 		return $rows;
 	}
 
+	/** @return array<int, array{0: string, 1: string}> Each path with what an AI agent pays for one request to it. */
+	public static function priceRows( array $settings ): array {
+		$price = static fn ( string $tier ): string => ucfirst( $tier ) . ': $' . Pricing::UNIT_PRICE_USD[ $tier ] . ' ' . __( 'per request', 'aifinpay' );
+		$rows  = [];
+		foreach ( $settings['protected_paths'] as $pattern ) {
+			$rows[] = [ $pattern, isset( $settings['path_tiers'][ $pattern ] ) ? $price( $settings['path_tiers'][ $pattern ] ) : $price( $settings['tier'] ) . ', ' . __( 'the site-wide price', 'aifinpay' ) ];
+		}
+		if ( $settings['charge_alternates'] && array_diff( Settings::alternates(), $settings['protected_paths'] ) ) {
+			$rows[] = [ __( 'REST API and feed', 'aifinpay' ), $price( Settings::alternatesTier( $settings ) ) . ', ' . __( 'in Enforce. They show the same posts, so they cost what your highest-priced page costs.', 'aifinpay' ) ];
+		}
+		foreach ( $settings['excluded_paths'] as $pattern ) {
+			$rows[] = [ $pattern, __( 'Free: excluded', 'aifinpay' ) ];
+		}
+		return $rows;
+	}
+
 	public static function render(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
@@ -294,13 +319,14 @@ final class Admin {
 								<option value="<?php echo esc_attr( $tier ); ?>" <?php selected( $settings['tier'], $tier ); ?>><?php echo esc_html( ucfirst( $tier ) . ': $' . $price ); ?></option>
 							<?php endforeach; ?>
 							</select>
+							<p class="description"><?php esc_html_e( 'For every protected path that has no price of its own.', 'aifinpay' ); ?></p>
 						</td>
 					</tr>
 					<tr>
 						<th scope="row"><label for="aifinpay-protected"><?php esc_html_e( 'Protected paths', 'aifinpay' ); ?></label></th>
 						<td>
-							<textarea id="aifinpay-protected" name="protected_paths" rows="4" class="large-text code"><?php echo esc_textarea( implode( "\n", $settings['protected_paths'] ) ); ?></textarea>
-							<p class="description"><?php esc_html_e( 'One exact path or /prefix/* per line. /* observes the whole site in Shadow without touching your page cache. A specific path is never page-cached, in Shadow too, so its counts are exact.', 'aifinpay' ); ?></p>
+							<textarea id="aifinpay-protected" name="protected_paths" rows="4" class="large-text code"><?php echo esc_textarea( implode( "\n", Settings::protectedLines( $settings ) ) ); ?></textarea>
+							<p class="description"><?php esc_html_e( 'One exact path or /prefix/* per line. To give a path its own price, add standard, complex or premium after it, for example /reports/* premium. A path without one costs the price per request above. /* observes the whole site in Shadow without touching your page cache. A specific path is never page-cached, in Shadow too, so its counts are exact.', 'aifinpay' ); ?></p>
 						</td>
 					</tr>
 					<tr>
@@ -312,6 +338,32 @@ final class Admin {
 						<td>
 							<label><input type="checkbox" name="charge_alternates" value="1" <?php checked( $settings['charge_alternates'] ); ?>> <?php esc_html_e( 'In Enforce, also charge AI agents on the REST content routes and the main feed', 'aifinpay' ); ?></label>
 							<p class="description"><?php esc_html_e( 'The same posts are readable at these addresses. Without this an agent can skip the payment. Logged-in users and browsers are not charged.', 'aifinpay' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Price of each path', 'aifinpay' ); ?></th>
+						<td>
+							<table class="widefat striped" id="aifinpay-prices">
+								<tbody>
+								<?php foreach ( self::priceRows( $settings ) as [ $path, $price ] ) : ?>
+									<tr><td><code><?php echo esc_html( $path ); ?></code></td><td><?php echo esc_html( $price ); ?></td></tr>
+								<?php endforeach; ?>
+								</tbody>
+							</table>
+							<p class="description">
+							<?php
+							echo esc_html(
+								sprintf(
+									/* translators: 1: the smallest prepayment in dollars, 2-4: how many requests it buys at each price. */
+									__( 'As saved. An AI agent prepays at least $%1$s at a time: %2$d requests at Standard, %3$d at Complex or %4$d at Premium.', 'aifinpay' ),
+									Pricing::unitsToUsd( intdiv( Pricing::MIN_BATCH_UNITS, Pricing::BASE_UNIT_MICRO ) ),
+									Pricing::MIN_REQUESTS['standard'],
+									Pricing::MIN_REQUESTS['complex'],
+									Pricing::MIN_REQUESTS['premium']
+								)
+							);
+							?>
+							</p>
 						</td>
 					</tr>
 					<tr>
