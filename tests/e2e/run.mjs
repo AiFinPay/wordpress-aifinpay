@@ -208,6 +208,15 @@ try {
     assert.equal(existsSync(join(web, 'wp-content/plugins/aifinpay/tests')), false, 'no tests in the zip');
     assert.equal(existsSync(join(web, 'wp-content/plugins/aifinpay/vendor')), false, 'no dev dependencies in the zip');
   });
+  await check('install', 'the installed version, the zip, the Stable tag and the changelog name one release', async () => {
+    const version = await wp('plugin', 'get', 'aifinpay', '--field=version');
+    assert.match(version, /^\d+\.\d+\.\d+$/);
+    assert.equal(await wpEval('echo AIFINPAY_VERSION;'), version, 'AIFINPAY_VERSION');
+    assert.ok(zip.endsWith(`/aifinpay-${version}.zip`), zip);
+    const readme = readFileSync(join(web, 'wp-content/plugins/aifinpay/readme.txt'), 'utf8');
+    assert.equal(readme.match(/^Stable tag: (.+)$/m)?.[1], version, 'Stable tag');
+    assert.equal(readme.split('== Changelog ==')[1]?.match(/^= (.+) =$/m)?.[1], version, 'newest changelog entry');
+  });
   await check('install', 'activation makes no external request', async () => assert.equal(outbound(), 0));
   await check('install', 'the secret and settings have their storage', async () => {
     const autoload = await wpEval(`global $wpdb; echo $wpdb->get_var("SELECT autoload FROM $wpdb->options WHERE option_name='aifinpay_settings'");`);
