@@ -34,7 +34,7 @@ AI agents and crawlers read your pages. AiFinPay shows you who they are and lets
 
 To report to your AiFinPay dashboard or to charge:
 
-1. In the dashboard at https://dash.aifinpay.io open your site, then **Settings → API keys → Connect a CMS site**, and copy the code. It works once and expires after ten minutes.
+1. In the dashboard at https://dash.aifinpay.io open your site, then **Profile & keys → API keys → Connect a CMS site**, and copy the code. It works once and expires after ten minutes.
 2. Paste it into **Settings → AiFinPay → Connect code** and save.
 3. To see agent traffic in the dashboard, tick **Report to AiFinPay**.
 4. To charge, list the paths under **Protected paths** and choose **Enforce**.

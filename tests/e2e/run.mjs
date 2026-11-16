@@ -270,6 +270,15 @@ try {
     assert.match(html, /<td>anthropic<\/td>/);
     assert.equal(outbound(), 0, 'opening the page sends nothing before a connection');
   });
+  await check('shadow', 'the connect code is found where the dashboard has it: Profile & keys → API keys → Connect a CMS site', async () => {
+    const path = 'Profile & keys → API keys → Connect a CMS site';
+    const field = (await adminPage()).match(/id="aifinpay-connect-code"[^>]*>\s*<p class="description">([^<]*)<\/p>/);
+    assert.ok(field, 'connect code description');
+    assert.ok(field[1].replaceAll('&amp;', '&').includes(`open your site, then ${path}.`), field[1]);
+    const readme = readFileSync(join(web, 'wp-content/plugins/aifinpay/readme.txt'), 'utf8');
+    assert.ok(readme.includes(`open your site, then **${path}**`), 'readme.txt');
+    for (const text of [field[1], readme]) assert.doesNotMatch(text, /Settings → API keys/);
+  });
   await check('shadow', 'a page may be asked for with any method without a refusal', async () => {
     assert.equal((await http('POST', '/paid/', { 'User-Agent': GPTBOT, 'Content-Length': 0 })).status, 200);
     assert.equal((await http('HEAD', '/paid/', { 'User-Agent': GPTBOT })).status, 200);
