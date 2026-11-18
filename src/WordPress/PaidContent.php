@@ -314,7 +314,7 @@ final class PaidContent {
 
 	private static function remember( \WP_Post $post ): void {
 		self::$texts[] = $post->post_content;
-		self::$texts[] = $post->post_excerpt;
+		self::$texts[] = PageAbout::publishes( $post ) ? '' : $post->post_excerpt;
 		self::$firstPaid ??= self::$paid[ $post->ID ] ?? null;
 	}
 
@@ -346,7 +346,7 @@ final class PaidContent {
 		$settings = Settings::get();
 		$rule     = self::$firstPaid['rule'] ?? '/';
 		$tier     = Settings::tiers( $settings )[ $rule ] ?? $settings['tier'];
-		return ReceiptGate::challenge( Connection::merchantId(), $rule, $tier, Api::origin() );
+		return PageAbout::add( ReceiptGate::challenge( Connection::merchantId(), $rule, $tier, Api::origin() ), $settings );
 	}
 
 	private static function termsTag(): string {

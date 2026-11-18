@@ -6,6 +6,7 @@ namespace AiFinPay\WordPress;
 
 defined( 'ABSPATH' ) || exit;
 
+use AiFinPay\Core\About;
 use AiFinPay\Core\Paths;
 use AiFinPay\Core\Pricing;
 use AiFinPay\Core\Unproven;
@@ -28,12 +29,16 @@ final class Settings {
 			'discovery_link'      => true,
 			'free_readers'        => Unproven::NAMED,
 			'turnstile_sitekey'   => '',
+			'about_pages'         => About::SUMMARY,
 		];
 	}
 
 	public static function get(): array {
 		$stored = get_option( self::OPTION, [] );
 		$s      = ( is_array( $stored ) ? $stored : [] ) + self::defaults();
+		// A site saved before this setting existed sends the 402 it sent.
+		$s['about_pages'] = is_array( $stored ) && [] !== $stored && ! array_key_exists( 'about_pages', $stored ) ? About::OFF : $s['about_pages'];
+		$s['about_pages'] = in_array( $s['about_pages'], About::SETTINGS, true ) ? $s['about_pages'] : About::OFF;
 		// Only the exact word turns charging on; anything else observes.
 		$s['mode'] = in_array( $s['mode'], [ 'off', 'shadow', 'enforce' ], true ) ? $s['mode'] : 'shadow';
 		$s['tier'] = Pricing::isTier( $s['tier'] ) ? $s['tier'] : 'standard';

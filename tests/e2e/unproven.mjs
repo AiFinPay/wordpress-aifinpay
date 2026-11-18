@@ -316,6 +316,23 @@ try {
     assert.deepEqual(held, json);
     assert.equal(json.resource, '/paid');
   });
+  await check('held', 'the held page and its 402 say what the page is; an Excerpt typed for it does not make the page bare', async () => {
+    const termsOf = (r) => JSON.parse(r.body.match(/id="aifp-402">([^<]*)</)[1]);
+    await configure({ ...proven, about_pages: 'title_summary' });
+    assert.deepEqual(termsOf(await get('/paid/')).about, { title: 'Paid' }, 'no manual excerpt: no description');
+    await wp('post', 'update', postId, '--post_excerpt=Notes on the paid post, written for readers.');
+    try {
+      const held = await get('/a-post/');
+      isHeld(held, 'held with an excerpt');
+      assert.deepEqual(termsOf(held).about, { title: 'A post', description: 'Notes on the paid post, written for readers.' });
+      assert.deepEqual(termsOf(held), JSON.parse((await get('/a-post/', { Accept: 'application/json' })).body));
+      await configure({ about_pages: 'off' });
+      assert.equal(termsOf(await get('/a-post/')).about, undefined);
+    } finally {
+      await wp('post', 'update', postId, '--post_excerpt=');
+      await configure({ about_pages: 'title_summary' });
+    }
+  });
   await check('held', 'a theme that prints the text itself, or never renders the content: the bare page', async () => {
     isBare(await get('/paid/', { 'X-Test-Raw': '1' }), 'printed raw');
     isBare(await get('/paid/', { 'X-Test-No-Content': '1' }), 'no holder');

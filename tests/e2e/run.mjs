@@ -145,7 +145,8 @@ const nonceIn = (html, action) => {
   const form = html.split('<form').find((f) => f.includes(`name="action" value="${action}"`));
   return form.match(/name="_wpnonce" value="([^"]+)"/)[1];
 };
-const defaults = { mode: 'shadow', tier: 'standard', protected_paths: '/*', excluded_paths: '', charge_alternates: '1', discovery_documents: '1', discovery_link: '1' };
+// The 402 checks below compare bytes with @aifinpay/gate, which has no `about`; it has its own check.
+const defaults = { mode: 'shadow', tier: 'standard', protected_paths: '/*', excluded_paths: '', charge_alternates: '1', discovery_documents: '1', discovery_link: '1', about_pages: 'off' };
 let current = { ...defaults };
 const submit = async (values = {}) => {
   const html = await adminPage();
@@ -501,6 +502,35 @@ try {
     assert.equal(r.body, JSON.stringify(theirs.body));
     assert.equal(JSON.parse(r.body).min_requests, 4);
     await submit({ tier: 'standard' });
+  });
+  await check('about', 'the 402 says what the page is: its title and the Excerpt typed for it, never text from the post', async () => {
+    const excerpt = 'A field guide to <b>river birds</b> &amp; their calls.';
+    const described = idOf(await wp('post', 'create', '--post_type=page', '--post_title=Birds &amp; <i>rivers</i>', '--post_name=birds', `--post_parent=${docs}`, '--post_status=publish', `--post_excerpt=${excerpt}`, `--post_content=${MARK} birds and a long paid text about herons, kingfishers and dippers along the river`, '--porcelain'));
+    const gate = createGate({ merchantId: MERCHANT, resource: '/paid', tier: 'standard', apiBase, jwks: { keys: [] }, store: { incrBy: async () => 1 } });
+    const theirs = (await gate({ path: '/paid', header: () => undefined })).body;
+    // A gate from npm before `about` ignores the option; then the expected body is built the way the SDK places it.
+    const told = (await createGate({ merchantId: MERCHANT, resource: '/paid', tier: 'standard', apiBase, jwks: { keys: [] }, store: { incrBy: async () => 1 }, about: () => ({ title: 'Paid' }) })({ path: '/paid', header: () => undefined })).body;
+    const expected = told.about ? told : Object.fromEntries(Object.entries(theirs).flatMap(([k, v]) => (k === 'resource' ? [[k, v], ['about', { title: 'Paid' }]] : [[k, v]])));
+    try {
+      await submit({ about_pages: 'title_summary' });
+      const paid = await get('/paid/', GPTBOT);
+      assert.equal(paid.status, 402);
+      assert.equal(paid.body.includes(MARK), false, 'no manual excerpt: no description, though WordPress would make one from the text');
+      assert.equal(paid.body, JSON.stringify(expected), 'the gate\'s 402 byte for byte, with about right after resource');
+      const birds = JSON.parse((await get('/docs/birds/', GPTBOT)).body);
+      assert.deepEqual(birds.about, { title: 'Birds & rivers', description: 'A field guide to river birds & their calls.' });
+      assert.equal(JSON.stringify(birds).includes(MARK), false);
+      assert.equal(JSON.parse((await get('/feed/', GPTBOT)).body).about, undefined, 'a feed is not one page');
+      assert.equal(JSON.parse((await get('/wp-json/wp/v2/pages', GPTBOT)).body).about, undefined, 'nor the REST API');
+      await submit({ about_pages: 'title' });
+      assert.deepEqual(JSON.parse((await get('/docs/birds/', GPTBOT)).body).about, { title: 'Birds & rivers' });
+      await submit({ about_pages: 'off' });
+      assert.equal((await get('/paid/', GPTBOT)).body, JSON.stringify(theirs));
+      assert.equal(JSON.parse((await get('/docs/birds/', GPTBOT)).body).about, undefined);
+    } finally {
+      await submit({ about_pages: 'off' });
+      await wp('post', 'delete', described, '--force');
+    }
   });
   await check('enforce', 'browsers are never charged: served, exempt, uncacheable, not reported', async () => {
     await wpEval('AiFinPay\\WordPress\\EventQueue::clear();');

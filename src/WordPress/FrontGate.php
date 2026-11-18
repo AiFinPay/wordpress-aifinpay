@@ -178,6 +178,7 @@ final class FrontGate {
 			$decision = [ 'status' => 503, 'body' => [ 'error' => 'payment_service_unavailable' ], 'headers' => [], 'event' => null, 'outcome' => 'refused', 'units' => 0 ];
 		}
 		self::observe( $decision, $rule, $settings );
+		$decision['body'] = PageAbout::add( $decision['body'], $settings );
 		foreach ( $decision['headers'] as $name => $value ) {
 			// Link is added beside the page's own values.
 			header( $name . ': ' . $value, 'Link' !== $name );
@@ -208,6 +209,7 @@ final class FrontGate {
 		if ( 'human' !== ( $decision['event']['ua_class'] ?? null ) ) {
 			self::observe( $decision, $rule, $settings );
 		}
+		$decision['body'] = PageAbout::add( $decision['body'], $settings );
 		foreach ( $decision['headers'] as $name => $value ) {
 			header( $name . ': ' . $value, 'Link' !== $name );
 		}

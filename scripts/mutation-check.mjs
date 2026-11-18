@@ -115,6 +115,17 @@ const unit = [
   ["unproven", "a JSON client gets the held page", "src/Core/Unproven.php", "&& self::acceptsHtml( $request->header( 'Accept' ) );\n\t}\n\n\t/** The free page", "&& true;\n\t}\n\n\t/** The free page"],
   ["unproven", "the Turnstile secret is autoloaded", "src/WordPress/ReaderKeys.php", "array_merge( self::stored(), $patch ), false );", "array_merge( self::stored(), $patch ), true );"],
   ["unproven", "the secret keys survive uninstall", "src/WordPress/Maintenance.php", "\t\tReaderKeys::OPTION,\n", ""],
+  ["about", "the automatic excerpt is the description", "src/WordPress/PageAbout.php", "return '' === $post->post_password ? $post->post_excerpt : '';", "return get_the_excerpt( $post );"],
+  ["about", "use strip_tags", "src/Core/About.php", "$text = (string) preg_replace( self::TAG, '', $value );", "$text = strip_tags( $value );"],
+  ["about", "tags are not stripped", "src/Core/About.php", "$text = (string) preg_replace( self::TAG, '', $value );", "$text = $value;"],
+  ["about", "the cap is ignored", "src/Core/About.php", "preg_match( '/^.{0,' . $max . '}/su', $text, $cut );", "preg_match( '/^.*/su', $text, $cut );"],
+  ["about", "said when the setting is off", "src/Core/About.php", "if ( self::TITLE !== $setting && self::SUMMARY !== $setting ) {", "if ( false ) {"],
+  ["about", "the title setting says the summary too", "src/Core/About.php", "if ( self::TITLE === $setting && null !== $about ) {", "if ( false ) {"],
+  ["about", "a description that repeats the paid text is said", "src/WordPress/PageAbout.php", "&& PaidText::leaks( $about['description'], [ $post->post_content ] ) ) {", "&& false ) {"],
+  ["about", "about goes last, not after resource", "src/Core/About.php", "if ( 'resource' === $key ) {\n\t\t\t\t$out['about'] = $about;\n\t\t\t}", ""],
+  ["about", "a throwing filter breaks the 402", "src/WordPress/PageAbout.php", "} catch ( \\Throwable ) {\n\t\t\treturn $body;", "} catch ( \\Throwable $e ) {\n\t\t\tthrow $e;"],
+  ["about", "a held page counts its own published excerpt as leaked text", "src/WordPress/PaidContent.php", "PageAbout::publishes( $post ) ? '' : $post->post_excerpt", "$post->post_excerpt"],
+  ["about", "an installed site starts telling agents", "src/WordPress/Settings.php", "! array_key_exists( 'about_pages', $stored ) ? About::OFF : $s['about_pages']", "! array_key_exists( 'about_pages', $stored ) ? $s['about_pages'] : $s['about_pages']"],
 ];
 const e2e = [
   ['cache', 'no DONOTCACHEPAGE', 'src/WordPress/CacheCompat.php', "define( 'DONOTCACHEPAGE', true );", "// removed"],
