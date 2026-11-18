@@ -8,6 +8,7 @@ defined( 'ABSPATH' ) || exit;
 
 use AiFinPay\Core\Paths;
 use AiFinPay\Core\Pricing;
+use AiFinPay\Core\Unproven;
 
 /** Plugin settings. Approval and charging host are deliberately not among them. */
 final class Settings {
@@ -25,6 +26,8 @@ final class Settings {
 			'report_events'       => false,
 			'discovery_documents' => true,
 			'discovery_link'      => true,
+			'free_readers'        => Unproven::NAMED,
+			'turnstile_sitekey'   => '',
 		];
 	}
 
@@ -42,7 +45,22 @@ final class Settings {
 		foreach ( [ 'charge_alternates', 'report_events', 'discovery_documents', 'discovery_link' ] as $key ) {
 			$s[ $key ] = (bool) $s[ $key ];
 		}
+		// A site saved before this setting existed keeps what it did: named agents pay, everyone else reads.
+		$s['free_readers']      = in_array( $s['free_readers'], Unproven::SETTINGS, true ) ? $s['free_readers'] : Unproven::NAMED;
+		$s['turnstile_sitekey'] = is_string( $s['turnstile_sitekey'] ) && self::validSitekey( $s['turnstile_sitekey'] ) ? $s['turnstile_sitekey'] : '';
 		return $s;
+	}
+
+	public static function validSitekey( string $key ): bool {
+		return 1 === preg_match( '/^[0-9A-Za-z_-]{1,100}$/D', $key );
+	}
+
+	/** Who reads protected paths free in Enforce. `proven` without its keys is `everyone`: never free. */
+	public static function readers( array $settings ): string {
+		if ( Unproven::PROVEN === $settings['free_readers'] && ( '' === $settings['turnstile_sitekey'] || ! ReaderKeys::complete() ) ) {
+			return Unproven::EVERYONE;
+		}
+		return $settings['free_readers'];
 	}
 
 	public static function save( array $settings ): void {

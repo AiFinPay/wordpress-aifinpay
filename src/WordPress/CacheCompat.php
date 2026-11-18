@@ -28,6 +28,9 @@ final class CacheCompat {
 
 	/** @internal */
 	public static function headers(): void {
+		if ( headers_sent() ) {
+			return;
+		}
 		header( 'Cache-Control: private, no-store, max-age=0' );
 		// These outrank Cache-Control at the CDN they address.
 		foreach ( [ 'CDN-Cache-Control', 'Surrogate-Control', 'Cloudflare-CDN-Cache-Control', 'Vercel-CDN-Cache-Control', 'Netlify-CDN-Cache-Control', 'Edge-Control', 'Akamai-Cache-Control' ] as $name ) {

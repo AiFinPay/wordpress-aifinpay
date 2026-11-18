@@ -13,6 +13,7 @@ use AiFinPay\Core\MerchantRecord;
 use AiFinPay\Core\Paths;
 use AiFinPay\Core\ReceiptGate;
 use AiFinPay\Core\Request;
+use AiFinPay\Core\Unproven;
 
 /** The gate at the three places a WordPress request can be answered. */
 final class FrontGate {
@@ -21,7 +22,7 @@ final class FrontGate {
 
 	public static function currentRequest(): Request {
 		$headers = [];
-		foreach ( [ 'HTTP_USER_AGENT' => 'user-agent', 'HTTP_AIFP_RECEIPT' => 'aifp-receipt', 'HTTP_AIFP_AGENT_ID' => 'aifp-agent-id' ] as $key => $name ) {
+		foreach ( [ 'HTTP_USER_AGENT' => 'user-agent', 'HTTP_AIFP_RECEIPT' => 'aifp-receipt', 'HTTP_AIFP_AGENT_ID' => 'aifp-agent-id', 'HTTP_COOKIE' => 'cookie', 'HTTP_ACCEPT' => 'accept' ] as $key => $name ) {
 			if ( isset( $_SERVER[ $key ] ) ) {
 				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Compared and parsed, never stored or printed; sanitizing would change a signed token.
 				$headers[ $name ] = (string) wp_unslash( $_SERVER[ $key ] );
@@ -62,6 +63,7 @@ final class FrontGate {
 		if ( null !== $resolved ) {
 			self::run( $request, $resolved['rule'], $resolved['path'], $tiers[ $resolved['rule'] ], $settings );
 		}
+		PaidContent::page( $request, $settings );
 	}
 
 	/** The REST API. Only patterns naming the REST prefix apply: "/*" must not reach webhooks and form endpoints. */
@@ -91,6 +93,7 @@ final class FrontGate {
 		if ( null !== $resolved ) {
 			self::run( $request, $resolved['rule'], $resolved['path'], $tiers[ $resolved['rule'] ], $settings );
 		}
+		PaidContent::rest( $request, $settings );
 	}
 
 	/** /llms.txt and /.well-known/x402.json, built from this site's settings. A physical file wins: the web server answers first. */
@@ -150,6 +153,11 @@ final class FrontGate {
 	}
 
 	private static function run( Request $request, string $rule, string $path, string $tier, array $settings ): void {
+		$readers = PaidContent::readers( $settings );
+		if ( null !== $readers ) {
+			self::runUnproven( $request, $rule, $path, $tier, $settings, $readers );
+			return;
+		}
 		$reader = AgentIdentity::isReader( $request );
 		if ( 'shadow' === $settings['mode'] ) {
 			try {
@@ -177,6 +185,43 @@ final class FrontGate {
 		if ( 200 !== $decision['status'] ) {
 			self::refuse( $decision['status'], $decision['body'] );
 		}
+	}
+
+	/** Only a proven reader, a verified search engine or a signed-in user reads free; everyone else meets the gate. */
+	private static function runUnproven( Request $request, string $rule, string $path, string $tier, array $settings, string $readers ): void {
+		CacheCompat::forbid();
+		PaidContent::onProtected();
+		$kind = PaidContent::kind( $request, $readers );
+		if ( in_array( $kind, Unproven::FREE_KINDS, true ) ) {
+			PaidContent::serve();
+			header( 'AIFP-Paywall: exempt' );
+			return;
+		}
+		try {
+			$merchant = Connection::merchantId();
+			$gate     = new ReceiptGate( new WpKeySet(), new WpdbMeter(), Api::origin() );
+			$decision = $gate->charge( $request, $merchant, MerchantRecord::charging( $merchant, RecordStore::get() ), $rule, $path, $tier, time() );
+		} catch ( \Throwable ) {
+			$decision = [ 'status' => 503, 'body' => [ 'error' => 'payment_service_unavailable' ], 'headers' => [], 'event' => null, 'outcome' => 'refused', 'units' => 0 ];
+		}
+		// A browser that has not passed the check yet is not counted as an agent.
+		if ( 'human' !== ( $decision['event']['ua_class'] ?? null ) ) {
+			self::observe( $decision, $rule, $settings );
+		}
+		foreach ( $decision['headers'] as $name => $value ) {
+			header( $name . ': ' . $value, 'Link' !== $name );
+		}
+		if ( 200 === $decision['status'] ) {
+			PaidContent::serve();
+			return;
+		}
+		$page = ! is_feed() && ! ( defined( 'REST_REQUEST' ) && REST_REQUEST );
+		if ( 402 === $decision['status'] && Unproven::holdable( $request, $kind, $page, $readers ) ) {
+			PaidContent::hold( $decision['body'] );
+			status_header( 402 );
+			return;
+		}
+		self::refuse( $decision['status'], $decision['body'] );
 	}
 
 	/** Origins disagree on such a spelling, so no price is safe to quote. A reader still gets the page. */

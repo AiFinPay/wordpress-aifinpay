@@ -16,6 +16,7 @@ final class Maintenance {
 	public const OPTIONS = [
 		Settings::OPTION,
 		Connection::OPTION,
+		ReaderKeys::OPTION,
 		RecordStore::LAST,
 		Schema::OPTION,
 		EventDelivery::LOCK,

@@ -4,7 +4,7 @@ Tags: ai, crawlers, paywall, http 402, agents
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.3.0
+Stable tag: 0.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,9 +20,14 @@ AI agents and crawlers read your pages. AiFinPay shows you who they are and lets
 
 **Readers never pay.** A browser and a logged-in user are served as usual. An agent that sends an AiFinPay receipt or agent ID always pays.
 
+**Who reads for free.** By default a client that does not name itself as an AI agent reads free. To charge scrapers that pretend to be browsers, choose **Readers who passed a check**: a browser passes a silent Cloudflare Turnstile check once (it may ask a distrusted browser for one click) and reads free for 30 days; Google, Bing, Apple, Yandex and Baidu crawlers verified by their network read free; everyone else gets the price. A browser sees the page at once with the paid part loading after the check. **Everyone pays** charges every request without a receipt, for API-like sections. Signed-in users never pay.
+
 = What it cannot do =
 
-* It reads what a client declares. A scraper that sends a browser User-Agent counts as a reader and is served free.
+* With the default setting it reads what a client declares: a scraper that sends a browser User-Agent counts as a reader and is served free. Choose **Readers who passed a check** to change that.
+* Automation in a real browser that passes the check, and a reader cookie copied into a script with the same User-Agent, read free.
+* Google's crawler serves both Search and Google's AI answers; a verified Googlebot reads free.
+* Search engines are verified by the address WordPress sees. Behind a proxy or CDN that address must be the client's (configure the web server, or the `aifinpay_client_ip` filter); otherwise no search engine is verified and they all pay.
 * Files in `wp-content/uploads` are served by your web server without WordPress, so they cannot be protected.
 * A protected path covers that URL. If your home page, an archive or a search result shows the full text of a protected post, that text is readable there too. Show excerpts on those pages, or protect them as well.
 * Dashboard rules per operator (allow, charge, block) are not applied yet.
@@ -59,9 +64,15 @@ In Enforce the REST API and the feed show the same posts as your pages, so they 
 
 An agent prepays at least $0.02 at a time. The batch is counted in units of $0.0005, so the same $0.02 pays for 40 Standard, 10 Complex or 4 Premium requests: a batch bought at a lower price never pays a dearer request at its own price.
 
+= What do I need for "Readers who passed a check"? =
+
+A Cloudflare account (the free plan is enough). Create a Turnstile widget for your site's domain in managed mode, then paste its site key and secret key under **Who reads for free**. The plugin generates its own reader key. Until both keys are saved the setting acts as **Everyone pays**: protected paths are never free by mistake, and the settings page says so.
+
+When a page shows its paid part in a way the plugin cannot hold back (a theme that prints the post text itself, or a page builder), the visitor gets a short page with the price instead, and the whole page after the check.
+
 = Is my secret safe? =
 
-The API secret is stored in the WordPress database of this site. It is never shown again, logged or sent to a browser. Connecting rotates the secret, so a secret used elsewhere for the same site stops working. Uninstalling deletes it.
+The API secret, the Turnstile secret key and the reader key are stored in the WordPress database of this site. They are never shown again, logged or sent to a browser. Connecting rotates the secret, so a secret used elsewhere for the same site stops working. Uninstalling deletes it.
 
 = What happens if AiFinPay is unreachable? =
 
@@ -75,6 +86,7 @@ This plugin connects to the AiFinPay API at `https://api.aifinpay.io`, operated 
 * **Site record:** once connected, the public record of your site is read from `GET /v1/merchants/{id}` when you open the settings page, in Enforce, and in Shadow when an agent presents a receipt, at most every five minutes. It sends no site data.
 * **Receipt keys:** once connected, when an agent presents a receipt, the public signing keys are read from `/.well-known/jwks.json` at most every ten minutes, in Shadow too: Shadow checks the receipt and spends nothing. It sends no site data.
 * **Resources:** when connected and you save settings with reporting or Enforce on, your protected path patterns, each with its price tier, are sent to `POST /v1/merchants/{id}/resources`.
+* **Cloudflare Turnstile, only with "Readers who passed a check":** on protected pages and, for visitors who have not passed it yet, on other pages, the visitor's browser loads `https://challenges.cloudflare.com/turnstile/v0/api.js`, operated by Cloudflare, Inc. When the check passes, this site sends the check token, your secret key and the visitor's IP address to `https://challenges.cloudflare.com/turnstile/v0/siteverify`. Terms: https://www.cloudflare.com/website-terms/ — Privacy: https://www.cloudflare.com/privacypolicy/
 * **Agent requests, only if you tick Report to AiFinPay:** per AI-agent request on a protected path, the operator, agent class, path pattern and time are sent to `POST /v1/merchants/{id}/gate-events`. Never the User-Agent, IP address, full URL or page content. Readers are not reported.
 
 Terms: https://aifinpay.io/terms — Privacy: https://aifinpay.io/privacy
@@ -82,6 +94,10 @@ Terms: https://aifinpay.io/terms — Privacy: https://aifinpay.io/privacy
 The pages this plugin serves to agents (the HTTP 402 body, `/llms.txt`) name further AiFinPay addresses, for the agent to use. Your server does not contact them.
 
 == Changelog ==
+
+= 0.4.0 =
+* New setting **Who reads for free**. The default keeps what the plugin did before: AI agents that name themselves pay, everyone else reads. **Readers who passed a check** lets through browsers that passed a Cloudflare Turnstile check, verified search engines and signed-in users, and gives everyone else the price; a browser gets the page with the paid part loading after the check. **Everyone pays** charges every request without a receipt.
+* With either new choice, a paid post's text is held back from the excerpt, feeds, the REST API and other pages too, and a page that still shows it is replaced by a short page with the price.
 
 = 0.3.0 =
 * Each protected path can have its own price: add standard, complex or premium after it. The settings page shows what each path costs.

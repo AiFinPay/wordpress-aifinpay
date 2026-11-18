@@ -136,6 +136,16 @@ final class ReceiptGate {
 		if ( AgentIdentity::isReader( $request ) ) {
 			return self::result( 200, null, [ 'AIFP-Paywall' => 'exempt' ], null, 'reader' );
 		}
+		return $this->charge( $request, $merchant, $charging, $rule, $path, $tier, $now );
+	}
+
+	/**
+	 * Enforce for a client the caller has found has not proven it may read free.
+	 *
+	 * @param array{approved: bool, host: ?string, network_mode: ?string, reason: string} $charging
+	 * @return array{status: int, body: ?array, headers: array<string, string>, event: ?array, outcome: string, units: int}
+	 */
+	public function charge( Request $request, string $merchant, array $charging, string $rule, string $path, string $tier, int $now ): array {
 		if ( ! preg_match( MerchantRecord::RE_MERCHANT, $merchant ) || true !== $charging['approved']
 			|| null === $charging['host'] || Request::normaliseHost( $request->host ) !== $charging['host'] ) {
 			return self::result( 503, [ 'error' => 'enforcement_not_approved' ], [], null, 'refused' );

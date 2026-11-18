@@ -16,6 +16,7 @@ final class Plugin {
 		add_action( Maintenance::CRON_EVENTS, [ EventDelivery::class, 'run' ], 10, 0 );
 		add_action( Maintenance::CRON_DAILY, [ Maintenance::class, 'housekeeping' ] );
 
+		add_action( 'parse_request', [ PaidContent::class, 'onParseRequest' ], 0, 0 );
 		add_action( 'parse_request', [ FrontGate::class, 'onParseRequest' ], 1, 0 );
 		add_filter( 'wp_headers', [ FrontGate::class, 'filterHeaders' ] );
 		// After redirect_canonical and wp_old_slug_redirect at 10: a request that ends in a 301 meters nothing.
