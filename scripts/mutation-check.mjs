@@ -44,7 +44,7 @@ const unit = [
   ['readers', 'browsers are charged', 'src/Core/AgentIdentity.php', "return 'human' === $class || ( $request->loggedIn && 'aifp_agent' !== $class );", "return $request->loggedIn && 'aifp_agent' !== $class;"],
   ['readers', 'logged-in users are charged', 'src/Core/AgentIdentity.php', "return 'human' === $class || ( $request->loggedIn && 'aifp_agent' !== $class );", "return 'human' === $class;"],
   ['readers', 'a login exempts a paying agent', 'src/Core/AgentIdentity.php', "( $request->loggedIn && 'aifp_agent' !== $class )", "$request->loggedIn"],
-  ['readers', 'an unapproved site refuses readers too', 'src/Core/ReceiptGate.php', "if ( AgentIdentity::isReader( $request ) ) {\n\t\t\treturn self::result( 200, null, [ 'AIFP-Paywall' => 'exempt' ], null, 'reader' );\n\t\t}\n\t\tif ( ! preg_match", "if ( ! preg_match"],
+  ['readers', 'an unapproved site refuses readers too', 'src/Core/ReceiptGate.php', "if ( AgentIdentity::isReader( $request ) ) {\n\t\t\treturn self::result( 200, null, [ 'AIFP-Paywall' => 'exempt' ], null, 'reader' );\n\t\t}\n\t\treturn $this->charge", "return $this->charge"],
   // Shadow and the secret
   ['shadow', 'a fresh install charges', 'src/WordPress/Settings.php', "'mode'                => 'shadow',", "'mode'                => 'enforce',"],
   ['shadow', 'shadow reports readers', 'src/Core/ReceiptGate.php', "if ( AgentIdentity::isReader( $request ) ) {\n\t\t\treturn self::result( 200, null, [], null, 'reader' );\n\t\t}\n", ""],
@@ -95,6 +95,26 @@ const unit = [
   ['prices', 'the meter takes the price from the receipt', 'src/Core/ReceiptGate.php', "$this->meter->spend( $merchant, $p['receipt_id'], $weight, $limit,", "$this->meter->spend( $merchant, $p['receipt_id'], Pricing::TIER_WEIGHTS[ $p['tier'] ?? '' ] ?? 1, $limit,"],
   ['events', 'a rejected credential drops the events', 'src/WordPress/EventDelivery.php', " || 401 === $status || 403 === $status;", ";"],
   ['events', 'the raw User-Agent goes on the wire', 'src/WordPress/EventQueue.php', "'verified' => $event['verified'],", "'verified' => $event['verified'],\n\t\t\t'ua' => 'x',"],
+  ["unproven", "any reader cookie is accepted", "src/Core/ReaderProof.php", "return hash_equals( $this->sign( $m[1], $user_agent ), $m[2] );", "return true;"],
+  ["unproven", "the User-Agent is left out of the signature", "src/Core/ReaderProof.php", "$exp . \"\\n\" . $user_agent, $this->key", "$exp . \"\\n\", $this->key"],
+  ["unproven", "an expired reader cookie is accepted", "src/Core/ReaderProof.php", "|| $exp <= $now ", ""],
+  ["unproven", "the content is rendered on a held page", "src/WordPress/PaidContent.php", "return is_feed() ? '<p>' . esc_html__( 'This post is paid for automated access.', 'aifinpay' ) . '</p>' : self::holder();", "return $content;"],
+  ["unproven", "the excerpt carries the text", "src/WordPress/PaidContent.php", "self::remember( $post );\n\t\treturn '';", "self::remember( $post );\n\t\treturn $excerpt;"],
+  ["unproven", "the feed carries the text", "src/WordPress/PaidContent.php", "return $post instanceof \\WP_Post && self::isPaid( $post ) ? '<p>'", "return false && $post instanceof \\WP_Post && self::isPaid( $post ) ? '<p>'"],
+  ["unproven", "the REST API carries the text", "src/WordPress/PaidContent.php", "$data[ $field ] = [ 'rendered' => '', 'protected' => true ];", "$data[ $field ]['protected'] = true;"],
+  ["unproven", "a guarded page is sent with the text in it", "src/WordPress/PaidContent.php", "$sure = ! PaidText::leaks( $page, self::$texts )", "$sure = true"],
+  ["unproven", "reverse DNS is not forward-confirmed", "src/Core/SearchBot.php", "foreach ( array_slice( $dns->forward( $name, $family ), 0, 32 ) as $address ) {", "return true;\n\t\t\tforeach ( array_slice( $dns->forward( $name, $family ), 0, 32 ) as $address ) {"],
+  ["unproven", "a PTR suffix matches without its leading dot", "src/Core/SearchBot.php", "str_ends_with( $name, $s )", "str_ends_with( $name, ltrim( $s, '.' ) )"],
+  ["unproven", "a resolver error is free", "src/Core/SearchBot.php", "return [ 'category' => null, 'ttl' => self::TTL_ERROR ];", "return [ 'category' => self::TABLE[ $operator ][2], 'ttl' => self::TTL_ERROR ];"],
+  ["unproven", "an AI marker does not stop a search-engine claim", "src/Core/SearchBot.php", "if ( str_contains( $ua, $marker ) ) {\n\t\t\t\treturn null;", "if ( false ) {\n\t\t\t\treturn null;"],
+  ["unproven", "the hostname is not checked after siteverify", "src/Core/HumanCheck.php", "|| Request::normaliseHost( $verdict['hostname'] ) !== Request::normaliseHost( $site_host ) || '' === $site_host ", ""],
+  ["unproven", "a failed siteverify passes", "src/Core/HumanCheck.php", "|| true !== ( $verdict['success'] ?? null ) ", ""],
+  ["unproven", "proven without its keys reads free", "src/WordPress/Settings.php", "return Unproven::EVERYONE;", "return Unproven::NAMED;"],
+  ["unproven", "an unknown setting turns proven on", "src/WordPress/Settings.php", "in_array( $s['free_readers'], Unproven::SETTINGS, true ) ? $s['free_readers'] : Unproven::NAMED", "( $s['free_readers'] ? Unproven::PROVEN : Unproven::NAMED )"],
+  ["unproven", "the agent header is free with a cookie", "src/Core/Unproven.php", "if ( '' !== (string) $request->header( 'AIFP-Receipt' ) || '' !== (string) $request->header( 'AIFP-Agent-Id' ) ) {\n\t\t\treturn 'agent';\n\t\t}\n", ""],
+  ["unproven", "a JSON client gets the held page", "src/Core/Unproven.php", "&& self::acceptsHtml( $request->header( 'Accept' ) );\n\t}\n\n\t/** The free page", "&& true;\n\t}\n\n\t/** The free page"],
+  ["unproven", "the Turnstile secret is autoloaded", "src/WordPress/ReaderKeys.php", "array_merge( self::stored(), $patch ), false );", "array_merge( self::stored(), $patch ), true );"],
+  ["unproven", "the secret keys survive uninstall", "src/WordPress/Maintenance.php", "\t\tReaderKeys::OPTION,\n", ""],
 ];
 const e2e = [
   ['cache', 'no DONOTCACHEPAGE', 'src/WordPress/CacheCompat.php', "define( 'DONOTCACHEPAGE', true );", "// removed"],
@@ -121,6 +141,14 @@ const e2e = [
   ['prices', 'the box shows no prices', 'src/WordPress/Admin.php', "implode( \"\\n\", Settings::protectedLines( $settings ) )", "implode( \"\\n\", $settings['protected_paths'] )"],
   ['approval', 'the charging host and approval are read from settings', 'src/WordPress/FrontGate.php', "$charging = $reader ? MerchantRecord::charging( '', null ) : MerchantRecord::charging( $merchant, RecordStore::get() );", "$charging = $reader ? MerchantRecord::charging( '', null ) : ( ( $settings['approved'] ?? false ) ? [ 'approved' => true, 'host' => '127.0.0.1', 'network_mode' => 'live', 'reason' => 'x' ] : MerchantRecord::charging( $merchant, RecordStore::get() ) );"],
 ];
+const unprovenE2e = [
+  ["unproven", "a held page may be cached", "src/WordPress/FrontGate.php", "CacheCompat::forbid();\n\t\tPaidContent::onProtected();", "PaidContent::onProtected();"],
+  ["unproven", "a full page for a reader may be cached", "src/WordPress/PaidContent.php", "// A page carrying the text must never be stored for the next client.\n\t\t\tCacheCompat::forbid();", ""],
+  ["unproven", "the feed body carries the text", "src/WordPress/PaidContent.php", "return is_feed() ? '<p>' . esc_html__( 'This post is paid for automated access.', 'aifinpay' ) . '</p>' : self::holder();", "return is_feed() ? $content : self::holder();"],
+  ["unproven", "a held page without a holder is sent", "src/WordPress/PaidContent.php", "str_contains( $page, '<div data-aifp-paid>' ) && ", ""],
+  ["unproven", "unproven clients get the page whole", "src/WordPress/FrontGate.php", "if ( in_array( $kind, Unproven::FREE_KINDS, true ) ) {", "if ( true ) {"],
+  ["unproven", "the browser gets the 402 JSON, not the page", "src/WordPress/FrontGate.php", "&& Unproven::holdable( $request, $kind, $page, $readers ) ) {", "&& false ) {"],
+];
 if (execFileSync('git', ['-C', root, 'status', '--porcelain', 'src', 'aifinpay.php'], { encoding: 'utf8' }).trim()) {
   console.error('Commit src/ first: this script edits it in place.');
   process.exit(2);
@@ -136,8 +164,8 @@ const phpunit = () => {
   }
   return null;
 };
-const fullE2e = () => {
-  const r = spawnSync('node', ['tests/e2e/run.mjs', 'sqlite'], { cwd: root, encoding: 'utf8', maxBuffer: 1 << 26 });
+const fullE2e = (script = 'run.mjs') => {
+  const r = spawnSync('node', [`tests/e2e/${script}`, 'sqlite'], { cwd: root, encoding: 'utf8', maxBuffer: 1 << 26 });
   if (r.status === 0) return null;
   return (r.stderr.match(/^FAIL (.+)$/m)?.[1] ?? 'failed to run');
 };
@@ -162,6 +190,7 @@ const runAll = (mutants, runner, label) => {
 };
 runAll(unit, phpunit, 'PHPUnit');
 if (withE2e) runAll(e2e, fullE2e, 'e2e');
+if (withE2e) runAll(unprovenE2e, () => fullE2e('unproven.mjs'), 'e2e');
 writeFileSync(join(root, '.local/mutation.md'), lines.join('\n') + '\n');
 console.log(`\n${survived} survived.`);
 process.exitCode = survived ? 1 : 0;

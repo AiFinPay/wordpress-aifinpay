@@ -10,6 +10,7 @@ use AiFinPay\Core\Eligibility;
 use AiFinPay\Core\MerchantRecord;
 use AiFinPay\Core\Paths;
 use AiFinPay\Core\Pricing;
+use AiFinPay\Core\Unproven;
 
 /** Settings → AiFinPay. */
 final class Admin {
@@ -40,7 +41,7 @@ final class Admin {
 		wp_add_privacy_policy_content(
 			'AiFinPay',
 			wp_kses_post(
-				'<p>' . __( 'AiFinPay counts requests from AI agents to the paths you protect. It stores no IP address, User-Agent or visitor identifier. If you connect the site and turn on reporting, counts per operator, agent class, path pattern and time are sent to AiFinPay. Readers are not reported.', 'aifinpay' ) . '</p>'
+				'<p>' . __( 'AiFinPay counts requests from AI agents to the paths you protect. It stores no IP address, User-Agent or visitor identifier. If you connect the site and turn on reporting, counts per operator, agent class, path pattern and time are sent to AiFinPay. Readers are not reported.', 'aifinpay' ) . '</p><p>' . __( 'If "Who reads for free" is set to readers who passed a check, visitors\' browsers load Cloudflare Turnstile, and when the check passes this site sends the check token and the visitor\'s IP address to Cloudflare and sets the cookie __aifp_human for 30 days. It holds an expiry time and a signature of the browser\'s User-Agent, nothing that identifies the visitor. For crawlers that name a search engine, a hash of their IP address is kept for up to a day while their network is verified.', 'aifinpay' ) . '</p>'
 			)
 		);
 	}
@@ -118,6 +119,28 @@ final class Admin {
 		foreach ( [ 'charge_alternates', 'report_events', 'discovery_documents', 'discovery_link' ] as $key ) {
 			$next[ $key ] = ! empty( $_POST[ $key ] );
 		}
+		$readers = isset( $_POST['free_readers'] ) ? sanitize_key( wp_unslash( $_POST['free_readers'] ) ) : $before['free_readers'];
+		if ( in_array( $readers, Unproven::SETTINGS, true ) ) {
+			$next['free_readers'] = $readers;
+		}
+		$sitekey = isset( $_POST['turnstile_sitekey'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['turnstile_sitekey'] ) ) ) : $before['turnstile_sitekey'];
+		if ( '' === $sitekey || Settings::validSitekey( $sitekey ) ) {
+			$next['turnstile_sitekey'] = $sitekey;
+		} else {
+			$notices[] = [ 'error', __( 'Turnstile site key not saved: it is not a valid key.', 'aifinpay' ) ];
+		}
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- A secret, checked against its pattern; sanitizing could change it.
+		$secret = isset( $_POST['turnstile_secret'] ) ? trim( (string) wp_unslash( $_POST['turnstile_secret'] ) ) : '';
+		if ( '' !== $secret ) {
+			if ( ReaderKeys::validSecret( $secret ) ) {
+				ReaderKeys::saveTurnstileSecret( $secret );
+			} else {
+				$notices[] = [ 'error', __( 'Turnstile secret key not saved: it is not a valid key.', 'aifinpay' ) ];
+			}
+		}
+		if ( Unproven::PROVEN === $next['free_readers'] ) {
+			ReaderKeys::ensureReaderKey();
+		}
 		$mode = isset( $_POST['mode'] ) ? sanitize_key( wp_unslash( $_POST['mode'] ) ) : 'shadow';
 		if ( in_array( $mode, [ 'off', 'shadow' ], true ) ) {
 			$next['mode'] = $mode;
@@ -139,6 +162,13 @@ final class Admin {
 		$changed = fn ( string $key ): bool => $before[ $key ] !== $next[ $key ];
 		if ( $changed( 'mode' ) || $changed( 'protected_paths' ) || $changed( 'excluded_paths' ) || $changed( 'charge_alternates' ) ) {
 			CacheCompat::purge();
+		} elseif ( $changed( 'free_readers' ) ) {
+			// A page stored for a reader carries the paid text in full.
+			CacheCompat::purge();
+		}
+		$fallback = self::readersFallback( $next );
+		if ( null !== $fallback ) {
+			$notices[] = [ 'warning', $fallback ];
 		}
 		Resources::sync( $next );
 		$notices[] = [ 'success', __( 'Settings saved.', 'aifinpay' ) ];
@@ -147,6 +177,14 @@ final class Admin {
 			$notices[] = [ 'warning', sprintf( __( 'AiFinPay did not accept %s yet. Requests to it are not reported until it does; the plugin retries daily.', 'aifinpay' ), $pattern ) ];
 		}
 		self::notices( $notices );
+	}
+
+	/** Why `proven` is not in force, or null. */
+	public static function readersFallback( array $settings ): ?string {
+		if ( Unproven::PROVEN !== $settings['free_readers'] || Unproven::PROVEN === Settings::readers( $settings ) ) {
+			return null;
+		}
+		return __( 'Readers who passed the check: needs the Turnstile site key and secret key. Until both are saved everyone pays on protected paths, readers too.', 'aifinpay' );
 	}
 
 	private static function enforceProblems( array $settings, ?array $record ): array {
@@ -202,6 +240,9 @@ final class Admin {
 			__( 'Mode', 'aifinpay' )     => $modes[ $settings['mode'] ],
 			__( 'Merchant', 'aifinpay' ) => '' === $merchant ? __( 'Not connected', 'aifinpay' ) : $merchant . ( isset( $record['name'] ) ? ' — ' . $record['name'] : '' ),
 		];
+		if ( Unproven::NAMED !== $settings['free_readers'] ) {
+			$rows[ __( 'Who reads for free', 'aifinpay' ) ] = self::readersFallback( $settings ) ?? self::readersLabels()[ $settings['free_readers'] ];
+		}
 		if ( '' !== $merchant ) {
 			$rows[ __( 'Network', 'aifinpay' ) ]          = null === $record ? __( 'Unknown', 'aifinpay' ) : ( 'test' === $record['network_mode'] ? __( 'Test', 'aifinpay' ) : __( 'Live', 'aifinpay' ) );
 			$rows[ __( 'Site URL', 'aifinpay' ) ]         = null === $record || null === $record['site_url'] ? __( 'Not set', 'aifinpay' ) : $record['site_url'] . ' ' . ( $record['site_verified'] ? __( '(domain verified)', 'aifinpay' ) : __( '(domain not verified)', 'aifinpay' ) );
@@ -228,6 +269,15 @@ final class Admin {
 			);
 		}
 		return $rows;
+	}
+
+	/** @return array<string, string> */
+	private static function readersLabels(): array {
+		return [
+			Unproven::NAMED    => __( 'Everyone except AI agents that name themselves. A scraper with a browser User-Agent reads free.', 'aifinpay' ),
+			Unproven::PROVEN   => __( 'Readers who passed a silent browser check, verified search engines and signed-in users. Everyone else gets the price (HTTP 402); a browser sees the page with the paid part loading after the check.', 'aifinpay' ),
+			Unproven::EVERYONE => __( 'Nobody except signed-in users: every request without a receipt pays.', 'aifinpay' ),
+		];
 	}
 
 	/** @return array<int, array{0: string, 1: string}> Each path with what an AI agent pays for one request to it. */
@@ -327,6 +377,32 @@ final class Admin {
 						<td>
 							<textarea id="aifinpay-protected" name="protected_paths" rows="<?php echo esc_attr( (string) min( 12, max( 4, count( $settings['protected_paths'] ) + 1 ) ) ); ?>" class="large-text code"><?php echo esc_textarea( implode( "\n", Settings::protectedLines( $settings ) ) ); ?></textarea>
 							<p class="description"><?php esc_html_e( 'One exact path or /prefix/* per line. To give a path its own price, add standard, complex or premium after it, for example /reports/* premium. A path without one costs the price per request above. /* observes the whole site in Shadow without touching your page cache. A specific path is never page-cached, in Shadow too, so its counts are exact.', 'aifinpay' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Who reads for free', 'aifinpay' ); ?></th>
+						<td>
+							<fieldset id="aifinpay-free-readers">
+							<?php foreach ( self::readersLabels() as $value => $label ) : ?>
+								<label style="display:block;margin-bottom:.4em"><input type="radio" name="free_readers" value="<?php echo esc_attr( $value ); ?>" <?php checked( $settings['free_readers'], $value ); ?>> <?php echo esc_html( $label ); ?></label>
+							<?php endforeach; ?>
+							</fieldset>
+							<?php $fallback = self::readersFallback( $settings ); ?>
+							<?php if ( null !== $fallback ) : ?>
+								<p class="description" id="aifinpay-readers-fallback"><strong><?php echo esc_html( $fallback ); ?></strong></p>
+							<?php endif; ?>
+							<p class="description"><?php esc_html_e( 'On protected paths, in Enforce. The check is Cloudflare Turnstile: create a widget for this site in your Cloudflare account and paste its keys below.', 'aifinpay' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="aifinpay-turnstile-sitekey"><?php esc_html_e( 'Turnstile site key', 'aifinpay' ); ?></label></th>
+						<td><input type="text" id="aifinpay-turnstile-sitekey" name="turnstile_sitekey" class="regular-text code" autocomplete="off" spellcheck="false" maxlength="100" value="<?php echo esc_attr( $settings['turnstile_sitekey'] ); ?>"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="aifinpay-turnstile-secret"><?php esc_html_e( 'Turnstile secret key', 'aifinpay' ); ?></label></th>
+						<td>
+							<input type="password" id="aifinpay-turnstile-secret" name="turnstile_secret" class="regular-text code" autocomplete="new-password" spellcheck="false" maxlength="200" value="">
+							<p class="description"><?php echo esc_html( '' !== ReaderKeys::turnstileSecret() ? __( 'Saved. It is not shown again; type a new one to replace it.', 'aifinpay' ) : __( 'Not saved yet. It stays on this server and is never shown again.', 'aifinpay' ) ); ?></p>
 						</td>
 					</tr>
 					<tr>
