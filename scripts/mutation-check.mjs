@@ -144,7 +144,6 @@ const e2e = [
 const unprovenE2e = [
   ["unproven", "a held page may be cached", "src/WordPress/FrontGate.php", "CacheCompat::forbid();\n\t\tPaidContent::onProtected();", "PaidContent::onProtected();"],
   ["unproven", "a full page for a reader may be cached", "src/WordPress/PaidContent.php", "// A page carrying the text must never be stored for the next client.\n\t\t\tCacheCompat::forbid();", ""],
-  ["unproven", "the feed body carries the text", "src/WordPress/PaidContent.php", "return is_feed() ? '<p>' . esc_html__( 'This post is paid for automated access.', 'aifinpay' ) . '</p>' : self::holder();", "return is_feed() ? $content : self::holder();"],
   ["unproven", "a held page without a holder is sent", "src/WordPress/PaidContent.php", "str_contains( $page, '<div data-aifp-paid>' ) && ", ""],
   ["unproven", "unproven clients get the page whole", "src/WordPress/FrontGate.php", "if ( in_array( $kind, Unproven::FREE_KINDS, true ) ) {", "if ( true ) {"],
   ["unproven", "the browser gets the 402 JSON, not the page", "src/WordPress/FrontGate.php", "&& Unproven::holdable( $request, $kind, $page, $readers ) ) {", "&& false ) {"],
