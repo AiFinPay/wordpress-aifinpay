@@ -4,7 +4,7 @@ Tags: ai, crawlers, paywall, http 402, agents
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.4.0
+Stable tag: 0.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,11 +20,13 @@ AI agents and crawlers read your pages. AiFinPay shows you who they are and lets
 
 **Readers never pay.** A browser and a logged-in user are served as usual. An agent that sends an AiFinPay receipt or agent ID always pays.
 
-**Who reads for free.** By default a client that does not name itself as an AI agent reads free. To charge scrapers that pretend to be browsers, choose **Readers who passed a check**: a browser passes a silent Cloudflare Turnstile check once (it may ask a distrusted browser for one click) and reads free for 30 days; Google, Bing, Apple, Yandex and Baidu crawlers verified by their network read free; everyone else gets the price. A browser sees the page at once with the paid part loading after the check. **Everyone pays** charges every request without a receipt, for API-like sections. Signed-in users never pay.
+**Who reads for free.** Three modes. **AI agents only**, the default: clients that say they are AI agents pay, everyone else reads. To charge scrapers that pretend to be browsers, choose **Strict**: a browser passes a silent Cloudflare Turnstile check once (it may ask a distrusted browser for one click) and reads free for 30 days; Google, Bing, Apple, Yandex and Baidu crawlers verified by their network read free; everyone else gets the price. A browser sees the page at once with the paid part loading after the check. **Everyone pays** charges every request without a receipt, for APIs, catalogs and data feeds. Signed-in users never pay.
+
+**Tell agents what a page is.** The price an agent gets (HTTP 402) can say which page it is paying for: the page title, and the Excerpt you typed for the post. The plugin never takes this text from the post itself, so nothing of what you sell is given away; without an Excerpt only the title is said. Choose **Title and summary** (the default for new sites), **Title** or **Off**. Sites updated from an earlier version start with **Off**.
 
 = What it cannot do =
 
-* With the default setting it reads what a client declares: a scraper that sends a browser User-Agent counts as a reader and is served free. Choose **Readers who passed a check** to change that.
+* With the default setting it reads what a client declares: a scraper that sends a browser User-Agent counts as a reader and is served free. Choose **Strict** to change that.
 * Automation in a real browser that passes the check, and a reader cookie copied into a script with the same User-Agent, read free.
 * Google's crawler serves both Search and Google's AI answers; a verified Googlebot reads free.
 * Search engines are verified by the address WordPress sees. Behind a proxy or CDN that address must be the client's (configure the web server, or the `aifinpay_client_ip` filter); otherwise no search engine is verified and they all pay.
@@ -64,7 +66,7 @@ In Enforce the REST API and the feed show the same posts as your pages, so they 
 
 An agent prepays at least $0.02 at a time. The batch is counted in units of $0.0005, so the same $0.02 pays for 40 Standard, 10 Complex or 4 Premium requests: a batch bought at a lower price never pays a dearer request at its own price.
 
-= What do I need for "Readers who passed a check"? =
+= What do I need for "Strict"? =
 
 A Cloudflare account (the free plan is enough). Create a Turnstile widget for your site's domain in managed mode, then paste its site key and secret key under **Who reads for free**. The plugin generates its own reader key. Until both keys are saved the setting acts as **Everyone pays**: protected paths are never free by mistake, and the settings page says so.
 
@@ -86,7 +88,7 @@ This plugin connects to the AiFinPay API at `https://api.aifinpay.io`, operated 
 * **Site record:** once connected, the public record of your site is read from `GET /v1/merchants/{id}` when you open the settings page, in Enforce, and in Shadow when an agent presents a receipt, at most every five minutes. It sends no site data.
 * **Receipt keys:** once connected, when an agent presents a receipt, the public signing keys are read from `/.well-known/jwks.json` at most every ten minutes, in Shadow too: Shadow checks the receipt and spends nothing. It sends no site data.
 * **Resources:** when connected and you save settings with reporting or Enforce on, your protected path patterns, each with its price tier, are sent to `POST /v1/merchants/{id}/resources`.
-* **Cloudflare Turnstile, only with "Readers who passed a check":** on protected pages and, for visitors who have not passed it yet, on other pages, the visitor's browser loads `https://challenges.cloudflare.com/turnstile/v0/api.js`, operated by Cloudflare, Inc. When the check passes, this site sends the check token, your secret key and the visitor's IP address to `https://challenges.cloudflare.com/turnstile/v0/siteverify`. Terms: https://www.cloudflare.com/website-terms/ — Privacy: https://www.cloudflare.com/privacypolicy/
+* **Cloudflare Turnstile, only with "Strict":** on protected pages and, for visitors who have not passed it yet, on other pages, the visitor's browser loads `https://challenges.cloudflare.com/turnstile/v0/api.js`, operated by Cloudflare, Inc. When the check passes, this site sends the check token, your secret key and the visitor's IP address to `https://challenges.cloudflare.com/turnstile/v0/siteverify`. Terms: https://www.cloudflare.com/website-terms/ — Privacy: https://www.cloudflare.com/privacypolicy/
 * **Agent requests, only if you tick Report to AiFinPay:** per AI-agent request on a protected path, the operator, agent class, path pattern and time are sent to `POST /v1/merchants/{id}/gate-events`. Never the User-Agent, IP address, full URL or page content. Readers are not reported.
 
 Terms: https://aifinpay.io/terms — Privacy: https://aifinpay.io/privacy
@@ -94,6 +96,11 @@ Terms: https://aifinpay.io/terms — Privacy: https://aifinpay.io/privacy
 The pages this plugin serves to agents (the HTTP 402 body, `/llms.txt`) name further AiFinPay addresses, for the agent to use. Your server does not contact them.
 
 == Changelog ==
+
+= 0.5.0 =
+* The three choices of **Who reads for free** are now named **AI agents only**, **Strict** and **Everyone pays**. What a site has saved is unchanged.
+* New setting **Tell agents what a page is**: the HTTP 402 of a single post or page can carry its title and the Excerpt you typed for it, never text taken from the post. Default **Title and summary** for new sites, **Off** for sites updated from an earlier version. The price, the payment and the receipt do not change.
+* Developers: the filter `aifinpay_about` supplies the title and summary for any request, archives and the REST API included.
 
 = 0.4.0 =
 * New setting **Who reads for free**. The default keeps what the plugin did before: AI agents that name themselves pay, everyone else reads. **Readers who passed a check** lets through browsers that passed a Cloudflare Turnstile check, verified search engines and signed-in users, and gives everyone else the price; a browser gets the page with the paid part loading after the check. **Everyone pays** charges every request without a receipt.

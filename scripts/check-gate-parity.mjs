@@ -71,6 +71,21 @@ for (const [tiers, paths] of priced) {
     checks++;
   }
 }
+// `about` (gate 0.13.0 and later): the shared vectors and its place in the 402. A lone surrogate cannot cross JSON into PHP; PHPUnit covers it.
+if (gate.pageAbout) {
+  const wellFormed = (v) => (typeof v === 'string' ? v.isWellFormed() : v && typeof v === 'object' ? Object.values(v).every(wellFormed) : true);
+  const vectors = JSON.parse(readFileSync(join(root, 'tests/fixtures/about-v1.json'), 'utf8')).vectors.filter((v) => wellFormed(v.value));
+  const ours = JSON.parse(php(`echo json_encode(array_map(fn($v)=>AiFinPay\\Core\\Json::encode(AiFinPay\\Core\\About::from($v)),json_decode(${phpString(JSON.stringify(vectors.map((v) => v.value)))},true)));`));
+  vectors.forEach((v, i) => {
+    assert.equal(ours[i], JSON.stringify(gate.pageAbout(v.value)), `about vector ${v.name}`);
+    checks++;
+  });
+  const about = { title: 'Fish &amp; <b>chips</b>', description: 'Fresh.' };
+  const theirs = JSON.stringify(gate.buildChallenge({ merchantId, resource: '/paid', tier: 'standard', weight: 1, apiBase: 'https://api.aifinpay.io', about }));
+  const mine = php(`echo AiFinPay\\Core\\Json::encode(AiFinPay\\Core\\About::insert(AiFinPay\\Core\\ReceiptGate::challenge('${merchantId}','/paid','standard','https://api.aifinpay.io'),AiFinPay\\Core\\About::from(json_decode(${phpString(JSON.stringify(about))},true))));`);
+  assert.equal(mine, theirs, 'the 402 with about');
+  checks++;
+}
 console.log(`@aifinpay/gate ${packaged}: ${checks} checks match the fixtures and the PHP core, byte for byte.`);
 
 function phpString(s) {

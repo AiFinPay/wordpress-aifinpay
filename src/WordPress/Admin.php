@@ -6,6 +6,7 @@ namespace AiFinPay\WordPress;
 
 defined( 'ABSPATH' ) || exit;
 
+use AiFinPay\Core\About;
 use AiFinPay\Core\Eligibility;
 use AiFinPay\Core\MerchantRecord;
 use AiFinPay\Core\Paths;
@@ -41,7 +42,7 @@ final class Admin {
 		wp_add_privacy_policy_content(
 			'AiFinPay',
 			wp_kses_post(
-				'<p>' . __( 'AiFinPay counts requests from AI agents to the paths you protect. It stores no IP address, User-Agent or visitor identifier. If you connect the site and turn on reporting, counts per operator, agent class, path pattern and time are sent to AiFinPay. Readers are not reported.', 'aifinpay' ) . '</p><p>' . __( 'If "Who reads for free" is set to readers who passed a check, visitors\' browsers load Cloudflare Turnstile, and when the check passes this site sends the check token and the visitor\'s IP address to Cloudflare and sets the cookie __aifp_human for 30 days. It holds an expiry time and a signature of the browser\'s User-Agent, nothing that identifies the visitor. For crawlers that name a search engine, a hash of their IP address is kept for up to a day while their network is verified.', 'aifinpay' ) . '</p>'
+				'<p>' . __( 'AiFinPay counts requests from AI agents to the paths you protect. It stores no IP address, User-Agent or visitor identifier. If you connect the site and turn on reporting, counts per operator, agent class, path pattern and time are sent to AiFinPay. Readers are not reported.', 'aifinpay' ) . '</p><p>' . __( 'If "Who reads for free" is set to Strict, visitors\' browsers load Cloudflare Turnstile, and when the check passes this site sends the check token and the visitor\'s IP address to Cloudflare and sets the cookie __aifp_human for 30 days. It holds an expiry time and a signature of the browser\'s User-Agent, nothing that identifies the visitor. For crawlers that name a search engine, a hash of their IP address is kept for up to a day while their network is verified.', 'aifinpay' ) . '</p>'
 			)
 		);
 	}
@@ -138,6 +139,10 @@ final class Admin {
 				$notices[] = [ 'error', __( 'Turnstile secret key not saved: it is not a valid key.', 'aifinpay' ) ];
 			}
 		}
+		$about = isset( $_POST['about_pages'] ) ? sanitize_key( wp_unslash( $_POST['about_pages'] ) ) : $before['about_pages'];
+		if ( in_array( $about, About::SETTINGS, true ) ) {
+			$next['about_pages'] = $about;
+		}
 		if ( Unproven::PROVEN === $next['free_readers'] ) {
 			ReaderKeys::ensureReaderKey();
 		}
@@ -184,7 +189,7 @@ final class Admin {
 		if ( Unproven::PROVEN !== $settings['free_readers'] || Unproven::PROVEN === Settings::readers( $settings ) ) {
 			return null;
 		}
-		return __( 'Readers who passed the check: needs the Turnstile site key and secret key. Until both are saved everyone pays on protected paths, readers too.', 'aifinpay' );
+		return __( 'Strict: needs the Turnstile site key and secret key. Until both are saved everyone pays on protected paths, readers too.', 'aifinpay' );
 	}
 
 	private static function enforceProblems( array $settings, ?array $record ): array {
@@ -241,7 +246,7 @@ final class Admin {
 			__( 'Merchant', 'aifinpay' ) => '' === $merchant ? __( 'Not connected', 'aifinpay' ) : $merchant . ( isset( $record['name'] ) ? ' — ' . $record['name'] : '' ),
 		];
 		if ( Unproven::NAMED !== $settings['free_readers'] ) {
-			$rows[ __( 'Who reads for free', 'aifinpay' ) ] = self::readersFallback( $settings ) ?? self::readersLabels()[ $settings['free_readers'] ];
+			$rows[ __( 'Who reads for free', 'aifinpay' ) ] = self::readersFallback( $settings ) ?? implode( ': ', self::readersLabels()[ $settings['free_readers'] ] );
 		}
 		if ( '' !== $merchant ) {
 			$rows[ __( 'Network', 'aifinpay' ) ]          = null === $record ? __( 'Unknown', 'aifinpay' ) : ( 'test' === $record['network_mode'] ? __( 'Test', 'aifinpay' ) : __( 'Live', 'aifinpay' ) );
@@ -271,12 +276,21 @@ final class Admin {
 		return $rows;
 	}
 
-	/** @return array<string, string> */
-	private static function readersLabels(): array {
+	/** @return array<string, array{0: string, 1: string}> Stored value => name, the line under it. */
+	public static function readersLabels(): array {
 		return [
-			Unproven::NAMED    => __( 'Everyone except AI agents that name themselves. A scraper with a browser User-Agent reads free.', 'aifinpay' ),
-			Unproven::PROVEN   => __( 'Readers who passed a silent browser check, verified search engines and signed-in users. Everyone else gets the price (HTTP 402); a browser sees the page with the paid part loading after the check.', 'aifinpay' ),
-			Unproven::EVERYONE => __( 'Nobody except signed-in users: every request without a receipt pays.', 'aifinpay' ),
+			Unproven::NAMED    => [ __( 'AI agents only', 'aifinpay' ), __( 'Clients that say they are AI agents pay. Everyone else reads.', 'aifinpay' ) ],
+			Unproven::PROVEN   => [ __( 'Strict', 'aifinpay' ), __( 'Only readers who passed a silent check and verified search engines read. Everyone else pays.', 'aifinpay' ) ],
+			Unproven::EVERYONE => [ __( 'Everyone pays', 'aifinpay' ), __( 'Every request without a receipt pays. For APIs, catalogs and data feeds.', 'aifinpay' ) ],
+		];
+	}
+
+	/** @return array<string, array{0: string, 1: string}> Stored value => name, the line under it. */
+	public static function aboutLabels(): array {
+		return [
+			About::SUMMARY => [ __( 'Title and summary', 'aifinpay' ), __( 'The page title, and the Excerpt you wrote for the post if there is one. Never text taken from the post itself.', 'aifinpay' ) ],
+			About::TITLE   => [ __( 'Title', 'aifinpay' ), __( 'Only the page title, which is already public.', 'aifinpay' ) ],
+			About::OFF     => [ __( 'Off', 'aifinpay' ), __( 'The price only.', 'aifinpay' ) ],
 		];
 	}
 
@@ -383,8 +397,8 @@ final class Admin {
 						<th scope="row"><?php esc_html_e( 'Who reads for free', 'aifinpay' ); ?></th>
 						<td>
 							<fieldset id="aifinpay-free-readers">
-							<?php foreach ( self::readersLabels() as $value => $label ) : ?>
-								<label style="display:block;margin-bottom:.4em"><input type="radio" name="free_readers" value="<?php echo esc_attr( $value ); ?>" <?php checked( $settings['free_readers'], $value ); ?>> <?php echo esc_html( $label ); ?></label>
+							<?php foreach ( self::readersLabels() as $value => [ $name, $line ] ) : ?>
+								<label style="display:block;margin-bottom:.6em"><input type="radio" name="free_readers" value="<?php echo esc_attr( $value ); ?>" <?php checked( $settings['free_readers'], $value ); ?>> <strong><?php echo esc_html( $name ); ?></strong><br><span style="margin-left:1.8em"><?php echo esc_html( $line ); ?></span></label>
 							<?php endforeach; ?>
 							</fieldset>
 							<?php $fallback = self::readersFallback( $settings ); ?>
@@ -403,6 +417,17 @@ final class Admin {
 						<td>
 							<input type="password" id="aifinpay-turnstile-secret" name="turnstile_secret" class="regular-text code" autocomplete="new-password" spellcheck="false" maxlength="200" value="">
 							<p class="description"><?php echo esc_html( '' !== ReaderKeys::turnstileSecret() ? __( 'Saved. It is not shown again; type a new one to replace it.', 'aifinpay' ) : __( 'Not saved yet. It stays on this server and is never shown again.', 'aifinpay' ) ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Tell agents what a page is', 'aifinpay' ); ?></th>
+						<td>
+							<fieldset id="aifinpay-about-pages">
+							<?php foreach ( self::aboutLabels() as $value => [ $name, $line ] ) : ?>
+								<label style="display:block;margin-bottom:.6em"><input type="radio" name="about_pages" value="<?php echo esc_attr( $value ); ?>" <?php checked( $settings['about_pages'], $value ); ?>> <strong><?php echo esc_html( $name ); ?></strong><br><span style="margin-left:1.8em"><?php echo esc_html( $line ); ?></span></label>
+							<?php endforeach; ?>
+							</fieldset>
+							<p class="description"><?php esc_html_e( 'Added to the price an AI agent gets (HTTP 402) on a single post or page, so it knows what it is paying for. It changes nothing about the price or the payment.', 'aifinpay' ); ?></p>
 						</td>
 					</tr>
 					<tr>
