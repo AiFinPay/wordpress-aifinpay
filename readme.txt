@@ -4,7 +4,7 @@ Tags: ai, crawlers, paywall, http 402, agents
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.5.0
+Stable tag: 0.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -89,6 +89,7 @@ This plugin connects to the AiFinPay API at `https://api.aifinpay.io`, operated 
 * **Receipt keys:** once connected, when an agent presents a receipt, the public signing keys are read from `/.well-known/jwks.json` at most every ten minutes, in Shadow too: Shadow checks the receipt and spends nothing. It sends no site data.
 * **Resources:** when connected and you save settings with reporting or Enforce on, your protected path patterns, each with its price tier, are sent to `POST /v1/merchants/{id}/resources`.
 * **Cloudflare Turnstile, only with "Strict":** on protected pages and, for visitors who have not passed it yet, on other pages, the visitor's browser loads `https://challenges.cloudflare.com/turnstile/v0/api.js`, operated by Cloudflare, Inc. When the check passes, this site sends the check token, your secret key and the visitor's IP address to `https://challenges.cloudflare.com/turnstile/v0/siteverify`. Terms: https://www.cloudflare.com/website-terms/ — Privacy: https://www.cloudflare.com/privacypolicy/
+* **Receipt use:** once connected, in Enforce, every five minutes the id of each receipt spent on your site and the units it has left are sent to `POST /v1/merchants/{id}/receipt-use`, so AiFinPay shows the same balance as your site. Never the receipt itself, the agent's request or anything about readers.
 * **Agent requests, only if you tick Report to AiFinPay:** per AI-agent request on a protected path, the operator, agent class, path pattern and time are sent to `POST /v1/merchants/{id}/gate-events`. Never the User-Agent, IP address, full URL or page content. Readers are not reported.
 
 Terms: https://aifinpay.io/terms — Privacy: https://aifinpay.io/privacy
@@ -96,6 +97,10 @@ Terms: https://aifinpay.io/terms — Privacy: https://aifinpay.io/privacy
 The pages this plugin serves to agents (the HTTP 402 body, `/llms.txt`) name further AiFinPay addresses, for the agent to use. Your server does not contact them.
 
 == Changelog ==
+
+= 0.6.0 =
+* AiFinPay, its dashboard and the paying agent now see how much of a receipt your site has used. After every paid read the plugin keeps the receipt's id and the units left, the lowest per receipt, and sends them to AiFinPay every five minutes while the site is connected. Never the receipt itself, and nothing about readers.
+* If AiFinPay does not take them yet, they are dropped and sent again after the next paid read; a page is never slowed or refused because of it. Agent request reporting is unchanged.
 
 = 0.5.0 =
 * The three choices of **Who reads for free** are now named **AI agents only**, **Strict** and **Everyone pays**. What a site has saved is unchanged.

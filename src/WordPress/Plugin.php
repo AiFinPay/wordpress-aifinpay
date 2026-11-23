@@ -14,6 +14,7 @@ final class Plugin {
 		add_action( 'plugins_loaded', [ Maintenance::class, 'maybeUpgrade' ] );
 		add_action( 'init', [ Maintenance::class, 'schedule' ] );
 		add_action( Maintenance::CRON_EVENTS, [ EventDelivery::class, 'run' ], 10, 0 );
+		add_action( Maintenance::CRON_EVENTS, [ UseDelivery::class, 'run' ], 20, 0 );
 		add_action( Maintenance::CRON_DAILY, [ Maintenance::class, 'housekeeping' ] );
 
 		add_action( 'parse_request', [ PaidContent::class, 'onParseRequest' ], 0, 0 );

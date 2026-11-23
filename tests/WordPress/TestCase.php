@@ -38,7 +38,7 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase {
 		foreach ( [ RecordStore::TRANSIENT, WpKeySet::TRANSIENT, WpKeySet::HOLD ] as $transient ) {
 			delete_transient( $transient );
 		}
-		foreach ( [ Schema::units(), Schema::events(), Schema::traffic() ] as $table ) {
+		foreach ( [ Schema::units(), Schema::events(), Schema::traffic(), Schema::uses() ] as $table ) {
 			$wpdb->query( "DELETE FROM $table" ); // phpcs:ignore
 		}
 		EventQueue::$enqueued = false;

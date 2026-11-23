@@ -23,7 +23,8 @@ final class ReceiptGate {
 		private KeySet $keys,
 		private Meter $meter,
 		private string $api,
-		private string $issuer = Receipt::ISSUER
+		private string $issuer = Receipt::ISSUER,
+		private ?UseLog $uses = null
 	) {}
 
 	/**
@@ -234,6 +235,13 @@ final class ReceiptGate {
 		}
 		if ( null === $used ) {
 			return $challenge( self::DETAIL_QUOTA_EXHAUSTED );
+		}
+		if ( null !== $this->uses && ReceiptUse::valid( $p['receipt_id'], $limit - $used ) ) {
+			try {
+				$this->uses->record( $p['receipt_id'], $limit - $used );
+			} catch ( \Throwable ) {
+				// Accounting never reaches the paid read.
+			}
 		}
 		return self::result(
 			200,
