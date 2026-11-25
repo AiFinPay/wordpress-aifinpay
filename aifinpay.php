@@ -3,7 +3,7 @@
  * Plugin Name:       AiFinPay
  * Plugin URI:        https://aifinpay.io
  * Description:       See which AI agents read your site and what they would pay, then charge them per request. Readers stay free.
- * Version:           0.5.0
+ * Version:           0.6.0
  * Requires at least: 6.5
  * Requires PHP:      8.1
  * Author:            Aifinpay OÜ
@@ -19,7 +19,7 @@ declare(strict_types=1);
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'AIFINPAY_VERSION', '0.5.0' );
+define( 'AIFINPAY_VERSION', '0.6.0' );
 
 require_once __DIR__ . '/src/autoload.php';
 

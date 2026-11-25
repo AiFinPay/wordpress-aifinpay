@@ -9,7 +9,7 @@ defined( 'ABSPATH' ) || exit;
 /** The plugin's tables. No IP, no User-Agent, no raw path, no receipt token. */
 final class Schema {
 
-	public const VERSION = '1';
+	public const VERSION = '2';
 	public const OPTION  = 'aifinpay_db_version';
 
 	public static function units(): string {
@@ -20,6 +20,11 @@ final class Schema {
 	public static function events(): string {
 		global $wpdb;
 		return $wpdb->prefix . 'aifinpay_gate_events';
+	}
+
+	public static function uses(): string {
+		global $wpdb;
+		return $wpdb->prefix . 'aifinpay_receipt_use';
 	}
 
 	public static function traffic(): string {
@@ -63,12 +68,20 @@ PRIMARY KEY  (row_key),
 KEY day (day)
 ) $charset;"
 		);
+		dbDelta(
+			'CREATE TABLE ' . self::uses() . " (
+receipt_id varchar(21) NOT NULL,
+remaining bigint(20) NOT NULL,
+attempts tinyint(4) NOT NULL DEFAULT 0,
+PRIMARY KEY  (receipt_id)
+) $charset;"
+		);
 		update_option( self::OPTION, self::VERSION, true );
 	}
 
 	public static function drop(): void {
 		global $wpdb;
-		foreach ( [ self::units(), self::events(), self::traffic() ] as $table ) {
+		foreach ( [ self::units(), self::events(), self::traffic(), self::uses() ] as $table ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange -- Uninstall removes the plugin's own tables.
 			$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $table ) );
 		}

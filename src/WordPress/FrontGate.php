@@ -172,7 +172,7 @@ final class FrontGate {
 		try {
 			$merchant = Connection::merchantId();
 			$charging = $reader ? MerchantRecord::charging( '', null ) : MerchantRecord::charging( $merchant, RecordStore::get() );
-			$gate     = new ReceiptGate( new WpKeySet(), new WpdbMeter(), Api::origin() );
+			$gate     = new ReceiptGate( new WpKeySet(), new WpdbMeter(), Api::origin(), uses: new WpdbUseLog() );
 			$decision = $gate->enforce( $request, $merchant, $charging, $rule, $path, $tier, time() );
 		} catch ( \Throwable ) {
 			$decision = [ 'status' => 503, 'body' => [ 'error' => 'payment_service_unavailable' ], 'headers' => [], 'event' => null, 'outcome' => 'refused', 'units' => 0 ];
@@ -200,7 +200,7 @@ final class FrontGate {
 		}
 		try {
 			$merchant = Connection::merchantId();
-			$gate     = new ReceiptGate( new WpKeySet(), new WpdbMeter(), Api::origin() );
+			$gate     = new ReceiptGate( new WpKeySet(), new WpdbMeter(), Api::origin(), uses: new WpdbUseLog() );
 			$decision = $gate->charge( $request, $merchant, MerchantRecord::charging( $merchant, RecordStore::get() ), $rule, $path, $tier, time() );
 		} catch ( \Throwable ) {
 			$decision = [ 'status' => 503, 'body' => [ 'error' => 'payment_service_unavailable' ], 'headers' => [], 'event' => null, 'outcome' => 'refused', 'units' => 0 ];
@@ -251,7 +251,7 @@ final class FrontGate {
 		$merchant = Connection::merchantId();
 		// Only a presented receipt reads the record or the keys: observing costs no request otherwise.
 		$network  = ! $reader && '' !== (string) $request->header( 'AIFP-Receipt' ) && '' !== $merchant ? ( RecordStore::get()['network_mode'] ?? null ) : null;
-		$gate     = new ReceiptGate( new WpKeySet(), new WpdbMeter(), Api::origin() );
+		$gate     = new ReceiptGate( new WpKeySet(), new WpdbMeter(), Api::origin(), uses: new WpdbUseLog() );
 		$decision = $gate->shadow( $request, $merchant, $network, $rule, $path, $tier, time() );
 		foreach ( $decision['headers'] as $name => $value ) {
 			header( $name . ': ' . $value );
