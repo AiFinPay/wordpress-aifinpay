@@ -202,7 +202,9 @@ final class TrafficAdapterTest extends TestCase {
 		$this->visit( '/a', self::GPTBOT, 'challenged', self::T );
 		update_option( TrafficDelivery::STATE, [ 'held' => [ [ 'id' => 'w0', 'to' => self::T, 'body' => '{}' ] ], 'paused_until' => null ], false );
 		$this->settings( [ 'report_traffic' => false ] );
+		$before = self::rows();
 		$this->visit( '/b', self::GPTBOT, 'challenged', self::T + 1 );
+		self::assertSame( $before, self::rows(), 'nothing is counted' );
 		TrafficDelivery::run( self::T + 400 );
 		self::assertSame( [], $this->traffic() );
 		self::assertSame( [], self::rows() );
