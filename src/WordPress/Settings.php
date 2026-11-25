@@ -30,6 +30,9 @@ final class Settings {
 			'free_readers'        => Unproven::NAMED,
 			'turnstile_sitekey'   => '',
 			'about_pages'         => About::SUMMARY,
+			'report_traffic'      => true,
+			'country_header'      => 'CF-IPCountry',
+			'network_header'      => '',
 		];
 	}
 
@@ -47,13 +50,21 @@ final class Settings {
 		}
 		// A price of its own only for a path still listed, and only a known one.
 		$s['path_tiers'] = is_array( $s['path_tiers'] ) ? array_filter( $s['path_tiers'], static fn ( $t, $p ): bool => in_array( $p, $s['protected_paths'], true ) && Pricing::isTier( $t ), ARRAY_FILTER_USE_BOTH ) : [];
-		foreach ( [ 'charge_alternates', 'report_events', 'discovery_documents', 'discovery_link' ] as $key ) {
+		foreach ( [ 'charge_alternates', 'report_events', 'discovery_documents', 'discovery_link', 'report_traffic' ] as $key ) {
 			$s[ $key ] = (bool) $s[ $key ];
+		}
+		foreach ( [ 'country_header', 'network_header' ] as $key ) {
+			$s[ $key ] = is_string( $s[ $key ] ) && self::validHeaderName( $s[ $key ] ) ? $s[ $key ] : '';
 		}
 		// A site saved before this setting existed keeps what it did: named agents pay, everyone else reads.
 		$s['free_readers']      = in_array( $s['free_readers'], Unproven::SETTINGS, true ) ? $s['free_readers'] : Unproven::NAMED;
 		$s['turnstile_sitekey'] = is_string( $s['turnstile_sitekey'] ) && self::validSitekey( $s['turnstile_sitekey'] ) ? $s['turnstile_sitekey'] : '';
 		return $s;
+	}
+
+	/** A request header the site's own CDN or server sets, by name; empty means none. */
+	public static function validHeaderName( string $name ): bool {
+		return '' === $name || 1 === preg_match( '/^[A-Za-z0-9][A-Za-z0-9-]{0,63}$/D', $name );
 	}
 
 	public static function validSitekey( string $key ): bool {

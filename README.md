@@ -33,6 +33,21 @@ Setting **Tell agents what a page is** (`about_pages`): `title_summary` (the def
 - Cleaned by `src/Core/About.php`, a port of `gate/src/about.ts` checked against `conformance/vectors/about-v1.json` of AiFinPay/sdk (copy in `tests/fixtures`). A wrong shape or a throwing filter leaves the 402 without `about` and otherwise unchanged.
 - Information only: the quote, the receipt and metering do not read it. With the setting `off` the 402 is byte for byte the gate's.
 
+## What the plugin tells AiFinPay
+
+Only while the site is connected (merchant ID and secret saved).
+
+- **Identity.** Every request with the merchant secret (resources, gate events, receipt use, traffic) carries `User-Agent: aifinpay-gate-wordpress/<version>` and `AIFP-Gate: pkg=wordpress; ver=<version>; platform=wordpress; mode=<shadow|enforce>; charge=<agents|unproven|everyone>`, as `conformance/vectors/gate-identity-v1.json` of AiFinPay/sdk. Mode Off is sent as `shadow`; **Who reads for free** maps `named`, `proven`, `everyone` to `agents`, `unproven`, `everyone` (`proven` without its keys acts, and is sent, as `everyone`).
+- **Events**, only with **Report to AiFinPay**: one per AI-agent request on a protected path (`/gate-events`).
+- **Receipt use**: the id and units left of each receipt spent here (`/receipt-use`).
+- **Traffic summaries**, setting `report_traffic` (**Send traffic summaries to AiFinPay**, on by default): five-minute windows to `POST /v1/merchants/{id}/gate-traffic`, as `conformance/vectors/gate-traffic-v1.json` (copy in `tests/fixtures`). A window holds counts by agent class and outcome; for agents only, by operator, by the first path segment (`/blog`) and by network number; and by country. Country and network come only from request headers the site names (`country_header`, default `CF-IPCountry`; `network_header`, none by default).
+
+Never sent: IP addresses, full paths, query strings, User-Agents, cookies, receipts or page content. Readers are never counted by network.
+
+Requests answered by a page cache or a CDN never reach PHP and are not counted.
+
+Counting happens on `shutdown`, after `fastcgi_finish_request` where the server has it, as one `INSERT … ON DUPLICATE KEY UPDATE` into `{prefix}aifinpay_traffic_windows`. A window is the rows sharing `window_from`, `mode` and `charge`; a request joins the earliest window opened less than 300 s ago, or opens one at its own second. Two first requests racing may open two windows a second apart; both are sent, nothing is lost or counted twice. Past 1000 sections or networks in a window, new ones count as `_other`. The five-minute WP-Cron run closes windows ten seconds after their end and sends them (`TrafficDelivery`, its own state in `aifinpay_traffic_sender`: at most three held, same id and bytes on retry, 404 pauses 6 h, other refusals 24 h). A request carrying `AIFP-Edge-Counted: 1` is answered the same and not counted. Turning the setting off or disconnecting deletes what is counted and held.
+
 ## Test
 
 Needs PHP 8.1+, Composer, Node 22+, WP-CLI, no Docker.

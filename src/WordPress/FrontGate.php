@@ -13,6 +13,7 @@ use AiFinPay\Core\MerchantRecord;
 use AiFinPay\Core\Paths;
 use AiFinPay\Core\ReceiptGate;
 use AiFinPay\Core\Request;
+use AiFinPay\Core\Traffic;
 use AiFinPay\Core\Unproven;
 
 /** The gate at the three places a WordPress request can be answered. */
@@ -62,6 +63,8 @@ final class FrontGate {
 		$resolved = Paths::resolve( $candidates, Settings::patterns( $settings ), self::excluded( $settings ), $tiers );
 		if ( null !== $resolved ) {
 			self::run( $request, $resolved['rule'], $resolved['path'], $tiers[ $resolved['rule'] ], $settings );
+		} else {
+			self::count( $request, 'served', null, $settings );
 		}
 		PaidContent::page( $request, $settings );
 	}
@@ -164,6 +167,7 @@ final class FrontGate {
 				self::shadow( $request, $rule, $path, $tier, $reader, $settings );
 			} catch ( \Throwable ) {
 				// Observing never breaks a page.
+				self::count( $request, 'error', null, $settings );
 				return;
 			}
 			return;
@@ -178,6 +182,7 @@ final class FrontGate {
 			$decision = [ 'status' => 503, 'body' => [ 'error' => 'payment_service_unavailable' ], 'headers' => [], 'event' => null, 'outcome' => 'refused', 'units' => 0 ];
 		}
 		self::observe( $decision, $rule, $settings );
+		self::count( $request, Traffic::outcome( $decision ), $decision['event'], $settings );
 		$decision['body'] = PageAbout::add( $decision['body'], $settings );
 		foreach ( $decision['headers'] as $name => $value ) {
 			// Link is added beside the page's own values.
@@ -194,6 +199,7 @@ final class FrontGate {
 		PaidContent::onProtected();
 		$kind = PaidContent::kind( $request, $readers );
 		if ( in_array( $kind, Unproven::FREE_KINDS, true ) ) {
+			self::count( $request, 'served', null, $settings );
 			PaidContent::serve();
 			header( 'AIFP-Paywall: exempt' );
 			return;
@@ -209,6 +215,7 @@ final class FrontGate {
 		if ( 'human' !== ( $decision['event']['ua_class'] ?? null ) ) {
 			self::observe( $decision, $rule, $settings );
 		}
+		self::count( $request, Traffic::outcome( $decision ), $decision['event'], $settings );
 		$decision['body'] = PageAbout::add( $decision['body'], $settings );
 		foreach ( $decision['headers'] as $name => $value ) {
 			header( $name . ': ' . $value, 'Link' !== $name );
@@ -230,6 +237,7 @@ final class FrontGate {
 	private static function refuseIfAmbiguous( Request $request, bool $ambiguous, array $settings ): void {
 		if ( $ambiguous && 'enforce' === $settings['mode'] && ! AgentIdentity::isReader( $request ) ) {
 			CacheCompat::forbid();
+			self::count( $request, 'blocked', null, $settings );
 			self::refuse( 400, [ 'error' => 'noncanonical_path', 'detail' => 'this path means different things to different servers' ] );
 		}
 	}
@@ -257,6 +265,16 @@ final class FrontGate {
 			header( $name . ': ' . $value );
 		}
 		self::observe( $decision, $rule, $settings );
+		self::count( $request, Traffic::outcome( $decision ), $decision['event'], $settings );
+	}
+
+	/** For the traffic summary, written after the response; nothing here may change the answer. */
+	private static function count( Request $request, string $outcome, ?array $event, array $settings ): void {
+		try {
+			TrafficCounter::note( $request, $outcome, $event, $settings );
+		} catch ( \Throwable ) {
+			return;
+		}
 	}
 
 	/** Nothing here may change the answer. */

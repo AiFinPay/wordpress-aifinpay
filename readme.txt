@@ -4,7 +4,7 @@ Tags: ai, crawlers, paywall, http 402, agents
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 0.6.0
+Stable tag: 0.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -23,6 +23,17 @@ AI agents and crawlers read your pages. AiFinPay shows you who they are and lets
 **Who reads for free.** Three modes. **AI agents only**, the default: clients that say they are AI agents pay, everyone else reads. To charge scrapers that pretend to be browsers, choose **Strict**: a browser passes a silent Cloudflare Turnstile check once (it may ask a distrusted browser for one click) and reads free for 30 days; Google, Bing, Apple, Yandex and Baidu crawlers verified by their network read free; everyone else gets the price. A browser sees the page at once with the paid part loading after the check. **Everyone pays** charges every request without a receipt, for APIs, catalogs and data feeds. Signed-in users never pay.
 
 **Tell agents what a page is.** The price an agent gets (HTTP 402) can say which page it is paying for: the page title, and the Excerpt you typed for the post. The plugin never takes this text from the post itself, so nothing of what you sell is given away; without an Excerpt only the title is said. Choose **Title and summary** (the default for new sites), **Title** or **Off**. Sites updated from an earlier version start with **Off**.
+
+= What the plugin tells AiFinPay =
+
+Nothing until you connect the site. Once connected:
+
+* **Which plugin is asking.** Every request to AiFinPay names this plugin, its version, the mode and who reads for free.
+* **Agent requests**, only if you tick **Report to AiFinPay**: one event per AI-agent request on a protected path.
+* **Receipt use**: how much of each receipt was spent on your site.
+* **Traffic summaries**, on unless you untick **Send traffic summaries to AiFinPay**: every five minutes, how many requests readers and AI agents made and how the plugin answered them, by agent company, by the first part of the address (`/blog`), and by country and network number if your CDN adds them in a header you name. Readers are never counted by network.
+
+Never sent: IP addresses, full addresses of pages, User-Agents, cookies, receipts or page content. Pages answered by a page cache or a CDN never reach WordPress and are not counted.
 
 = What it cannot do =
 
@@ -90,6 +101,8 @@ This plugin connects to the AiFinPay API at `https://api.aifinpay.io`, operated 
 * **Resources:** when connected and you save settings with reporting or Enforce on, your protected path patterns, each with its price tier, are sent to `POST /v1/merchants/{id}/resources`.
 * **Cloudflare Turnstile, only with "Strict":** on protected pages and, for visitors who have not passed it yet, on other pages, the visitor's browser loads `https://challenges.cloudflare.com/turnstile/v0/api.js`, operated by Cloudflare, Inc. When the check passes, this site sends the check token, your secret key and the visitor's IP address to `https://challenges.cloudflare.com/turnstile/v0/siteverify`. Terms: https://www.cloudflare.com/website-terms/ — Privacy: https://www.cloudflare.com/privacypolicy/
 * **Receipt use:** once connected, in Enforce, every five minutes the id of each receipt spent on your site and the units it has left are sent to `POST /v1/merchants/{id}/receipt-use`, so AiFinPay shows the same balance as your site. Never the receipt itself, the agent's request or anything about readers.
+* **Traffic summaries, unless you untick Send traffic summaries to AiFinPay:** once connected, every five minutes, counts of the requests the plugin answered (readers and AI agents, how they were answered, agent company, the first part of the path, and country and network number from headers you name) are sent to `POST /v1/merchants/{id}/gate-traffic`. Never an IP address, full URL, User-Agent or page content.
+* **Which plugin is asking:** every request above that carries your API secret also sends the plugin's name and version, the mode and who reads for free, in the `User-Agent` and `AIFP-Gate` headers.
 * **Agent requests, only if you tick Report to AiFinPay:** per AI-agent request on a protected path, the operator, agent class, path pattern and time are sent to `POST /v1/merchants/{id}/gate-events`. Never the User-Agent, IP address, full URL or page content. Readers are not reported.
 
 Terms: https://aifinpay.io/terms — Privacy: https://aifinpay.io/privacy
@@ -97,6 +110,11 @@ Terms: https://aifinpay.io/terms — Privacy: https://aifinpay.io/privacy
 The pages this plugin serves to agents (the HTTP 402 body, `/llms.txt`) name further AiFinPay addresses, for the agent to use. Your server does not contact them.
 
 == Changelog ==
+
+= 0.7.0 =
+* While the site is connected, the plugin sends AiFinPay a short traffic summary every five minutes: how many requests readers and AI agents made, how they were answered, which agent companies, the first part of the address and, if your CDN supplies them in a header you name, country and network number. Never an IP address, a full address or a User-Agent. To stop it, untick **Send traffic summaries to AiFinPay**.
+* Every request to AiFinPay now names the plugin, its version, the mode and who reads for free.
+* Counting happens after the page has been sent; a failure to count or send never changes a page, a price, agent request reporting or receipt use.
 
 = 0.6.0 =
 * AiFinPay, its dashboard and the paying agent now see how much of a receipt your site has used. After every paid read the plugin keeps the receipt's id and the units left, the lowest per receipt, and sends them to AiFinPay every five minutes while the site is connected. Never the receipt itself, and nothing about readers.

@@ -42,7 +42,7 @@ final class Admin {
 		wp_add_privacy_policy_content(
 			'AiFinPay',
 			wp_kses_post(
-				'<p>' . __( 'AiFinPay counts requests from AI agents to the paths you protect. It stores no IP address, User-Agent or visitor identifier. If you connect the site and turn on reporting, counts per operator, agent class, path pattern and time are sent to AiFinPay. Readers are not reported.', 'aifinpay' ) . '</p><p>' . __( 'If "Who reads for free" is set to Strict, visitors\' browsers load Cloudflare Turnstile, and when the check passes this site sends the check token and the visitor\'s IP address to Cloudflare and sets the cookie __aifp_human for 30 days. It holds an expiry time and a signature of the browser\'s User-Agent, nothing that identifies the visitor. For crawlers that name a search engine, a hash of their IP address is kept for up to a day while their network is verified.', 'aifinpay' ) . '</p>'
+				'<p>' . __( 'AiFinPay counts requests from AI agents to the paths you protect. It stores no IP address, User-Agent or visitor identifier. If you connect the site and turn on reporting, counts per operator, agent class, path pattern and time are sent to AiFinPay. Readers are not reported.', 'aifinpay' ) . '</p><p>' . __( 'While the site is connected it also sends AiFinPay a summary every five minutes: how many requests readers and AI agents made, by agent company, the first part of the path and, if your CDN supplies them, country and network number (never for readers). No IP address, full path or User-Agent is sent. This can be turned off in the settings.', 'aifinpay' ) . '</p><p>' . __( 'If "Who reads for free" is set to Strict, visitors\' browsers load Cloudflare Turnstile, and when the check passes this site sends the check token and the visitor\'s IP address to Cloudflare and sets the cookie __aifp_human for 30 days. It holds an expiry time and a signature of the browser\'s User-Agent, nothing that identifies the visitor. For crawlers that name a search engine, a hash of their IP address is kept for up to a day while their network is verified.', 'aifinpay' ) . '</p>'
 			)
 		);
 	}
@@ -64,6 +64,7 @@ final class Admin {
 		check_admin_referer( self::DISCONNECT );
 		Connection::delete();
 		EventQueue::clear();
+		TrafficDelivery::forget();
 		delete_option( Resources::STATE );
 		$settings = Settings::get();
 		if ( 'enforce' === $settings['mode'] ) {
@@ -117,8 +118,17 @@ final class Admin {
 		} else {
 			$next['excluded_paths'] = array_slice( $parsed['valid'], 0, 50 );
 		}
-		foreach ( [ 'charge_alternates', 'report_events', 'discovery_documents', 'discovery_link' ] as $key ) {
+		foreach ( [ 'charge_alternates', 'report_events', 'discovery_documents', 'discovery_link', 'report_traffic' ] as $key ) {
 			$next[ $key ] = ! empty( $_POST[ $key ] );
+		}
+		foreach ( [ 'country_header', 'network_header' ] as $key ) {
+			$header = isset( $_POST[ $key ] ) ? trim( sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) ) : $before[ $key ];
+			if ( Settings::validHeaderName( $header ) ) {
+				$next[ $key ] = $header;
+			} else {
+				/* translators: %s: what the owner typed. */
+				$notices[] = [ 'error', sprintf( __( '%s was not saved: a header name has only letters, digits and dashes.', 'aifinpay' ), $header ) ];
+			}
 		}
 		$readers = isset( $_POST['free_readers'] ) ? sanitize_key( wp_unslash( $_POST['free_readers'] ) ) : $before['free_readers'];
 		if ( in_array( $readers, Unproven::SETTINGS, true ) ) {
@@ -163,6 +173,9 @@ final class Admin {
 		Settings::save( $next );
 		if ( ! $next['report_events'] ) {
 			EventQueue::clear();
+		}
+		if ( ! $next['report_traffic'] ) {
+			TrafficDelivery::forget();
 		}
 		$changed = fn ( string $key ): bool => $before[ $key ] !== $next[ $key ];
 		if ( $changed( 'mode' ) || $changed( 'protected_paths' ) || $changed( 'excluded_paths' ) || $changed( 'charge_alternates' ) ) {
@@ -353,6 +366,16 @@ final class Admin {
 						<td>
 							<label><input type="checkbox" name="report_events" value="1" <?php checked( $settings['report_events'] ); ?>> <?php esc_html_e( 'Send agent requests to my AiFinPay dashboard', 'aifinpay' ); ?></label>
 							<p class="description"><?php esc_html_e( 'One event per AI-agent request on a protected path: operator, agent class, path pattern and time. Never the User-Agent, IP address or page content. Readers are not reported.', 'aifinpay' ); ?></p>
+							<label style="display:block;margin-top:1em"><input type="checkbox" name="report_traffic" value="1" <?php checked( $settings['report_traffic'] ); ?>> <?php esc_html_e( 'Send traffic summaries to AiFinPay', 'aifinpay' ); ?></label>
+							<p class="description"><?php esc_html_e( 'Every five minutes, how many requests of each kind the plugin answered: readers, AI agents and their companies, the first part of the address they read, and a country. Never an address, a full path or a User-Agent.', 'aifinpay' ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Visitor country and network', 'aifinpay' ); ?></th>
+						<td>
+							<label style="display:block;margin-bottom:.4em"><?php esc_html_e( 'Country header', 'aifinpay' ); ?> <input type="text" name="country_header" class="regular-text code" autocomplete="off" spellcheck="false" maxlength="64" value="<?php echo esc_attr( $settings['country_header'] ); ?>"></label>
+							<label style="display:block"><?php esc_html_e( 'Network header', 'aifinpay' ); ?> <input type="text" name="network_header" class="regular-text code" autocomplete="off" spellcheck="false" maxlength="64" value="<?php echo esc_attr( $settings['network_header'] ); ?>"></label>
+							<p class="description"><?php esc_html_e( 'Names of the headers your CDN adds with the visitor\'s country and network number, for the summaries. CF-IPCountry is Cloudflare\'s. Leave a box empty to send none.', 'aifinpay' ); ?></p>
 						</td>
 					</tr>
 				</table>
@@ -499,7 +522,7 @@ final class Admin {
 	private static function renderTraffic(): void {
 		$rows = TrafficLog::report();
 		if ( ! $rows ) {
-			echo '<p>' . esc_html__( 'No AI-agent requests to protected paths yet. Counted on this site; nothing is sent anywhere unless you turn on reporting.', 'aifinpay' ) . '</p>';
+			echo '<p>' . esc_html__( 'No AI-agent requests to protected paths yet. Counted on this site.', 'aifinpay' ) . '</p>';
 			return;
 		}
 		?>

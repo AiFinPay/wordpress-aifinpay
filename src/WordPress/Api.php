@@ -6,6 +6,8 @@ namespace AiFinPay\WordPress;
 
 defined( 'ABSPATH' ) || exit;
 
+use AiFinPay\Core\GateIdentity;
+
 /** The AiFinPay API, pinned origin, no redirects. */
 final class Api {
 
@@ -20,16 +22,31 @@ final class Api {
 		return self::OFFICIAL;
 	}
 
-	/** @return array{status: ?int, body: string} status null when AiFinPay was not reached. */
+	/** User-Agent and AIFP-Gate for this plugin as it is set up now. */
+	public static function identity(): array {
+		$settings = Settings::get();
+		return GateIdentity::headers( GateIdentity::PKG, AIFINPAY_VERSION, GateIdentity::PLATFORM, GateIdentity::mode( $settings['mode'] ), GateIdentity::charge( Settings::readers( $settings ) ) );
+	}
+
+	/**
+	 * Every request with the merchant secret says which gate sends it.
+	 *
+	 * @return array{status: ?int, body: string} status null when AiFinPay was not reached.
+	 */
 	public static function request( string $method, string $path, array $headers = [], ?string $body = null, float $timeout = 8.0 ): array {
-		$args     = [
+		$identity = GateIdentity::headers( GateIdentity::PKG, AIFINPAY_VERSION, GateIdentity::PLATFORM, 'shadow', 'agents' );
+		if ( isset( $headers['AIFP-Merchant-Secret'] ) ) {
+			$identity             = self::identity();
+			$headers['AIFP-Gate'] = $identity['AIFP-Gate'];
+		}
+		$args = [
 			'method'              => $method,
 			'headers'             => $headers + [ 'Accept' => 'application/json' ],
 			'timeout'             => $timeout,
 			'redirection'         => 0,
 			'sslverify'           => true,
 			'limit_response_size' => 65536,
-			'user-agent'          => 'AiFinPay-WordPress/' . AIFINPAY_VERSION,
+			'user-agent'          => $identity['User-Agent'],
 		];
 		if ( null !== $body ) {
 			$args['body'] = $body;
