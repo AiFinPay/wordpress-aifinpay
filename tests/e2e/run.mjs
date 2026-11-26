@@ -48,7 +48,7 @@ const mint = (patch = {}, key = privateKey) => {
 };
 const state = {
   record: { merchant_id: MERCHANT, name: 'E2E site', network_mode: 'test', site_url: `${base}/`, site_verified: false },
-  recordDown: false, jwksDown: false, codeUsed: false, resources: new Map(), events: [], calls: [], ingest: null,
+  recordDown: false, jwksDown: false, codeUsed: false, resources: new Map(), events: [], calls: [], ingest: null, traffic: [],
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const api = createServer(async (req, res) => {
@@ -82,6 +82,11 @@ const api = createServer(async (req, res) => {
     }
     state.events.push(...body.events);
     return json(200, { accepted: body.events.length, duplicates: 0 });
+  }
+  if (req.url === `/v1/merchants/${MERCHANT}/gate-traffic` && req.method === 'POST') {
+    if (!authed) return json(403, {});
+    state.traffic.push(JSON.parse(raw));
+    return json(200, { accepted: true, duplicate: false, rows: 0, skipped: 0 });
   }
   // The agent's side of the flow: what the 402 tells it to call.
   if (req.url === '/v1/quote' && req.method === 'POST') {
@@ -146,7 +151,7 @@ const nonceIn = (html, action) => {
   return form.match(/name="_wpnonce" value="([^"]+)"/)[1];
 };
 // The 402 checks below compare bytes with @aifinpay/gate, which has no `about`; it has its own check.
-const defaults = { mode: 'shadow', tier: 'standard', protected_paths: '/*', excluded_paths: '', charge_alternates: '1', discovery_documents: '1', discovery_link: '1', about_pages: 'off' };
+const defaults = { mode: 'shadow', tier: 'standard', protected_paths: '/*', excluded_paths: '', charge_alternates: '1', discovery_documents: '1', discovery_link: '1', about_pages: 'off', report_traffic: '1' };
 let current = { ...defaults };
 const submit = async (values = {}) => {
   const html = await adminPage();
@@ -832,6 +837,54 @@ try {
       const body = JSON.parse((await get(asked, GPTBOT)).body);
       assert.deepEqual([body.resource, body.tier], [resource, 'standard'], asked);
     }
+  });
+
+  // ── Traffic summaries ────────────────────────────────────────────────────
+  await check('traffic', 'a request an edge gate counted gets the same answer, and only the unmarked one is counted', async () => {
+    await submit({ report_events: '1', report_traffic: '1' });
+    await wpEval('AiFinPay\\WordPress\\TrafficCounter::clear(); delete_option(AiFinPay\\WordPress\\TrafficDelivery::STATE);');
+    const same = (r) => [r.status, r.body, r.headers['content-type'], r.headers['cache-control'], r.headers['aifp-mode'], r.headers['aifp-shadow-status']];
+    const plain = await get('/paid/', GPTBOT, { 'CF-IPCountry': 'ua' });
+    const marked = await get('/paid/', GPTBOT, { 'CF-IPCountry': 'ua', 'AIFP-Edge-Counted': '1' });
+    assert.equal(plain.status, 402);
+    assert.deepEqual(same(marked), same(plain));
+    assert.equal((await get('/paid/?secret=1')).status, 200);
+    assert.equal((await pay('/paid/', mint({ unit_quota: 1, nonce: 'n-traffic' }))).status, 200);
+    state.traffic.length = 0;
+    await wpEval('AiFinPay\\WordPress\\TrafficDelivery::run(null, true);');
+    assert.equal(state.traffic.length, 1);
+    const w = state.traffic[0];
+    assert.deepEqual(Object.keys(w), ['v', 'id', 'from', 'to', 'mode', 'charge', 'sample', 'classes', 'operators', 'sections', 'countries']);
+    assert.deepEqual([w.mode, w.charge, w.sample], ['enforce', 'agents', 1]);
+    assert.deepEqual(w.classes, [['ai_crawler', 'challenged', 1], ['aifp_agent', 'paid', 1], ['human', 'served', 1]]);
+    assert.deepEqual(w.operators, [['aifinpay', 'aifp_agent', 'paid', 1], ['openai', 'ai_crawler', 'challenged', 1]]);
+    assert.deepEqual(w.sections, [['/paid', 'ai_crawler', 1], ['/paid', 'aifp_agent', 1]]);
+    assert.deepEqual(w.countries, [['UA', 'ai_crawler', 1], ['ZZ', 'aifp_agent', 1], ['ZZ', 'human', 1]]);
+    assert.doesNotMatch(JSON.stringify(w), /secret|Mozilla|GPTBot|127\.0\.0\.1/);
+  });
+  await check('traffic', 'gate events, receipt use and traffic say which gate sends them', async () => {
+    const version = await wp('plugin', 'get', 'aifinpay', '--field=version');
+    const from = state.calls.length;
+    await get('/paid/', GPTBOT);
+    await pay('/paid/', mint({ unit_quota: 1, nonce: 'n-identity' }));
+    await wp('cron', 'event', 'run', 'aifinpay_flush_events');
+    await wpEval('AiFinPay\\WordPress\\TrafficDelivery::run(null, true);');
+    const secret = state.calls.slice(from).filter((c) => c.headers['aifp-merchant-secret']);
+    assert.deepEqual([...new Set(secret.map((c) => c.url.split('/').pop()))].sort(), ['gate-events', 'gate-traffic', 'receipt-use']);
+    for (const c of secret) {
+      assert.equal(c.headers['user-agent'], `aifinpay-gate-wordpress/${version}`, c.url);
+      assert.equal(c.headers['aifp-gate'], `pkg=wordpress; ver=${version}; platform=wordpress; mode=enforce; charge=agents`, c.url);
+    }
+  });
+  await check('traffic', 'turned off, nothing is counted or sent', async () => {
+    await submit({ report_traffic: '' });
+    await get('/paid/', GPTBOT);
+    state.traffic.length = 0;
+    await wp('cron', 'event', 'run', 'aifinpay_flush_events');
+    await wpEval('AiFinPay\\WordPress\\TrafficDelivery::run(null, true);');
+    assert.equal(state.traffic.length, 0);
+    assert.equal(await wpEval('global $wpdb; echo (int) $wpdb->get_var("SELECT COUNT(*) FROM " . AiFinPay\\WordPress\\Schema::trafficWindows());'), '0');
+    await submit({ report_traffic: '1' });
   });
 
   // ── Enforce: approval and host, live from the record ─────────────────────

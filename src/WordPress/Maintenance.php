@@ -22,6 +22,8 @@ final class Maintenance {
 		EventDelivery::LOCK,
 		EventDelivery::STATE,
 		Resources::STATE,
+		TrafficDelivery::STATE,
+		TrafficDelivery::LOCK,
 	];
 
 	public const TRANSIENTS = [ RecordStore::TRANSIENT, WpKeySet::TRANSIENT, WpKeySet::HOLD ];

@@ -15,6 +15,7 @@ final class Plugin {
 		add_action( 'init', [ Maintenance::class, 'schedule' ] );
 		add_action( Maintenance::CRON_EVENTS, [ EventDelivery::class, 'run' ], 10, 0 );
 		add_action( Maintenance::CRON_EVENTS, [ UseDelivery::class, 'run' ], 20, 0 );
+		add_action( Maintenance::CRON_EVENTS, [ TrafficDelivery::class, 'run' ], 30, 0 );
 		add_action( Maintenance::CRON_DAILY, [ Maintenance::class, 'housekeeping' ] );
 
 		add_action( 'parse_request', [ PaidContent::class, 'onParseRequest' ], 0, 0 );
@@ -24,6 +25,8 @@ final class Plugin {
 		add_action( 'template_redirect', [ FrontGate::class, 'onTemplateRedirect' ], 20, 0 );
 		add_action( 'rest_api_init', [ FrontGate::class, 'onRestInit' ], 0, 0 );
 		add_action( 'shutdown', [ EventDelivery::class, 'fallback' ], 100, 0 );
+		// Last: the traffic count is written once the response is out.
+		add_action( 'shutdown', [ TrafficCounter::class, 'write' ], PHP_INT_MAX, 0 );
 
 		if ( is_admin() ) {
 			Admin::register( $file );

@@ -11,6 +11,8 @@ use AiFinPay\WordPress\RecordStore;
 use AiFinPay\WordPress\Resources;
 use AiFinPay\WordPress\Schema;
 use AiFinPay\WordPress\Settings;
+use AiFinPay\WordPress\TrafficCounter;
+use AiFinPay\WordPress\TrafficDelivery;
 use AiFinPay\WordPress\WpKeySet;
 
 /** A real WordPress and database; only the outbound HTTP is answered here, through its own filter. */
@@ -32,16 +34,17 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase {
 		global $wpdb;
 		$wpdb->suppress_errors( false );
 		$wpdb->show_errors( false );
-		foreach ( [ Settings::OPTION, Connection::OPTION, RecordStore::LAST, EventDelivery::LOCK, EventDelivery::STATE, Resources::STATE ] as $option ) {
+		foreach ( [ Settings::OPTION, Connection::OPTION, RecordStore::LAST, EventDelivery::LOCK, EventDelivery::STATE, Resources::STATE, TrafficDelivery::STATE, TrafficDelivery::LOCK ] as $option ) {
 			delete_option( $option );
 		}
 		foreach ( [ RecordStore::TRANSIENT, WpKeySet::TRANSIENT, WpKeySet::HOLD ] as $transient ) {
 			delete_transient( $transient );
 		}
-		foreach ( [ Schema::units(), Schema::events(), Schema::traffic(), Schema::uses() ] as $table ) {
+		foreach ( [ Schema::units(), Schema::events(), Schema::traffic(), Schema::uses(), Schema::trafficWindows() ] as $table ) {
 			$wpdb->query( "DELETE FROM $table" ); // phpcs:ignore
 		}
 		EventQueue::$enqueued = false;
+		( new \ReflectionProperty( TrafficCounter::class, 'seen' ) )->setValue( null, null );
 		$this->calls          = [];
 		$this->responder      = static fn () => 500;
 		add_filter( 'pre_http_request', [ $this, 'answer' ], 10, 3 );

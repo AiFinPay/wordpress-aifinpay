@@ -9,7 +9,7 @@ defined( 'ABSPATH' ) || exit;
 /** The plugin's tables. No IP, no User-Agent, no raw path, no receipt token. */
 final class Schema {
 
-	public const VERSION = '2';
+	public const VERSION = '3';
 	public const OPTION  = 'aifinpay_db_version';
 
 	public static function units(): string {
@@ -30,6 +30,12 @@ final class Schema {
 	public static function traffic(): string {
 		global $wpdb;
 		return $wpdb->prefix . 'aifinpay_traffic';
+	}
+
+	/** Counts of the open and not yet sent five-minute windows for AiFinPay. */
+	public static function trafficWindows(): string {
+		global $wpdb;
+		return $wpdb->prefix . 'aifinpay_traffic_windows';
 	}
 
 	public static function install(): void {
@@ -76,12 +82,25 @@ attempts tinyint(4) NOT NULL DEFAULT 0,
 PRIMARY KEY  (receipt_id)
 ) $charset;"
 		);
+		dbDelta(
+			'CREATE TABLE ' . self::trafficWindows() . " (
+window_from bigint(20) NOT NULL,
+mode varchar(16) NOT NULL,
+charge varchar(16) NOT NULL,
+tbl varchar(16) NOT NULL,
+k1 varchar(40) NOT NULL,
+k2 varchar(32) NOT NULL,
+k3 varchar(16) NOT NULL DEFAULT '',
+n bigint(20) NOT NULL DEFAULT 0,
+PRIMARY KEY  (window_from,mode,charge,tbl,k1,k2,k3)
+) $charset;"
+		);
 		update_option( self::OPTION, self::VERSION, true );
 	}
 
 	public static function drop(): void {
 		global $wpdb;
-		foreach ( [ self::units(), self::events(), self::traffic(), self::uses() ] as $table ) {
+		foreach ( [ self::units(), self::events(), self::traffic(), self::uses(), self::trafficWindows() ] as $table ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange -- Uninstall removes the plugin's own tables.
 			$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $table ) );
 		}
